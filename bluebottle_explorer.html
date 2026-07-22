@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bluebottle Data Explorer · VIZ Swim</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --deep:#0f2e38; --panel:#12333d; --panel2:#16404c; --ocean:#4a8fad;
+    --ink:#dfe8ec; --dim:#7fa0ad; --line:rgba(122,160,173,.18);
+    --spring:#4caf50; --summer:#c9c246; --autumn:#e08a3c; --winter:#4a8fad;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--deep);color:var(--ink);font-family:'Inter',sans-serif;
+    padding:20px 14px 60px;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1080px;margin:0 auto;}
+  h1{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:1.5px;line-height:1;}
+  .sub{font-size:12.5px;color:var(--dim);margin:5px 0 0;line-height:1.55;max-width:640px;}
+  .sub b{color:#cfe0e8;font-weight:600;}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px;}
+  .caveat-pill{font-size:11px;color:var(--dim);background:var(--panel);border:1px solid var(--line);
+    border-radius:20px;padding:6px 12px;line-height:1.4;max-width:230px;}
+  .caveat-pill b{color:var(--summer);}
+
+  .filters{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;}
+  .fgroup{display:flex;flex-direction:column;gap:6px;}
+  .flabel{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);font-weight:600;}
+  .chips{display:flex;gap:5px;flex-wrap:wrap;}
+  .chip{font-size:12px;font-weight:500;color:var(--dim);background:transparent;border:1px solid var(--line);
+    border-radius:20px;padding:5px 12px;cursor:pointer;transition:all .12s;font-family:inherit;}
+  .chip:hover{border-color:var(--ocean);color:var(--ink);}
+  .chip.on{background:var(--ocean);border-color:var(--ocean);color:#06222c;font-weight:600;}
+  .chip.s-spring.on{background:var(--spring);border-color:var(--spring);}
+  .chip.s-summer.on{background:var(--summer);border-color:var(--summer);}
+  .chip.s-autumn.on{background:var(--autumn);border-color:var(--autumn);}
+  .chip.s-winter.on{background:var(--winter);border-color:var(--winter);}
+  select{font-family:inherit;font-size:12px;background:var(--panel2);color:var(--ink);
+    border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;min-width:150px;}
+  .countline{margin-left:auto;font-size:12px;color:var(--dim);}
+  .countline b{color:var(--ink);font-family:'Bebas Neue';font-size:19px;letter-spacing:.5px;vertical-align:-1px;}
+  .reset{font-size:11.5px;color:var(--ocean);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit;}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;}
+  .kpi .k-l{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);font-weight:600;}
+  .kpi .k-v{font-family:'Bebas Neue';font-size:27px;letter-spacing:.5px;margin-top:3px;line-height:1;}
+  .kpi .k-s{font-size:11px;color:var(--dim);margin-top:2px;}
+
+  .grid{display:grid;grid-template-columns:1.05fr 1fr;gap:16px;align-items:start;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;}
+  .p-title{font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);
+    font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+  .p-note{font-size:10px;color:var(--dim);font-weight:400;letter-spacing:0;text-transform:none;font-style:italic;}
+  .stack{display:flex;flex-direction:column;gap:16px;}
+
+  svg.map{width:100%;height:auto;display:block;user-select:none;}
+  .bdot{cursor:pointer;transition:opacity .12s;}
+  .bdot:hover{opacity:.85;}
+  .tip{position:fixed;pointer-events:none;background:#06222c;border:1px solid var(--ocean);
+    border-radius:8px;padding:7px 10px;font-size:11.5px;color:var(--ink);z-index:50;opacity:0;
+    transition:opacity .1s;box-shadow:0 6px 20px rgba(0,0,0,.4);max-width:180px;line-height:1.4;}
+  .tip b{font-family:'Bebas Neue';font-size:15px;letter-spacing:.5px;font-weight:400;}
+
+  .bars{display:flex;flex-direction:column;gap:5px;}
+  .bar-row{display:grid;grid-template-columns:74px 1fr 34px;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;}
+  .bar-row .bl{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-row:hover .bl{color:var(--ink);}
+  .bar-track{background:rgba(122,160,173,.10);border-radius:4px;height:15px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;transition:width .25s;min-width:2px;}
+  .bar-row .bv{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .bar-row.muted{opacity:.35;}
+
+  .mrow{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:96px;margin-top:2px;}
+  .mcell{background:rgba(122,160,173,.10);border-radius:3px 3px 0 0;cursor:pointer;position:relative;
+    display:flex;align-items:flex-start;justify-content:center;transition:all .2s;min-height:3px;}
+  .mcell:hover{filter:brightness(1.15);}
+  .mcell.off{opacity:.3;}
+  .mlabels{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;margin-top:4px;}
+  .mlabels span{font-size:9px;color:var(--dim);text-align:center;}
+
+  table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  th{text-align:left;font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);
+    font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;}
+  th:hover{color:var(--ink);}
+  td{padding:6px 8px;border-bottom:1px solid rgba(122,160,173,.08);}
+  tr.brow{cursor:pointer;}
+  tr.brow:hover td{background:var(--panel2);}
+  tr.brow.sel td{background:rgba(74,143,173,.18);}
+  .season-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px;}
+  .rtag{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);}
+
+  .live-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .live-big{font-family:'Bebas Neue';font-size:40px;letter-spacing:1px;line-height:.9;}
+  .spark{display:flex;gap:2px;align-items:flex-end;height:40px;}
+  .spark i{width:5px;background:var(--ocean);border-radius:2px 2px 0 0;min-height:2px;display:block;}
+  .live-note{font-size:11px;color:var(--dim);line-height:1.5;}
+  .dot-live{width:8px;height:8px;border-radius:50%;background:var(--spring);display:inline-block;
+    margin-right:6px;box-shadow:0 0 0 0 rgba(76,175,80,.6);animation:pulse 2s infinite;}
+  @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(76,175,80,0)}100%{box-shadow:0 0 0 0 rgba(76,175,80,0)}}
+
+  .foot{font-size:11px;color:var(--dim);margin-top:22px;line-height:1.7;background:var(--panel);
+    border-left:3px solid var(--ocean);padding:12px 16px;border-radius:0 8px 8px 0;}
+  .foot b{color:#cfe0e8;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin-top:10px;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:11px;height:11px;border-radius:50%;display:inline-block;}
+
+  @media(max-width:860px){
+    .grid{grid-template-columns:1fr;}
+    .kpis{grid-template-columns:1fr 1fr;}
+    h1{font-size:28px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div>
+      <h1>Bluebottle data explorer</h1>
+      <p class="sub"><b>705</b> iNaturalist <i>Physalia</i> sightings across Sydney, 2011–2026 &mdash; <b>621</b> pinned to a beach here. Filter by season, region or beach; every panel updates live. This shows <b>where and when</b> bluebottles have been recorded, and which way each beach faces.</p>
+    </div>
+    <div class="caveat-pill"><b>Read counts with care.</b> They track where people look as much as where bluebottles land &mdash; the busiest beaches are also the most-reported.</div>
+  </div>
+
+  <div class="filters">
+    <div class="fgroup">
+      <span class="flabel">Season</span>
+      <div class="chips" id="seasonChips">
+        <button class="chip on" data-season="all">All</button>
+        <button class="chip s-spring" data-season="spring">Spring</button>
+        <button class="chip s-summer" data-season="summer">Summer</button>
+        <button class="chip s-autumn" data-season="autumn">Autumn</button>
+        <button class="chip s-winter" data-season="winter">Winter</button>
+      </div>
+    </div>
+    <div class="fgroup">
+      <span class="flabel">Region</span>
+      <div class="chips" id="regionChips">
+        <button class="chip on" data-region="all">All</button>
+        <button class="chip" data-region="north">Northern</button>
+        <button class="chip" data-region="east">Eastern</button>
+        <button class="chip" data-region="south">South</button>
+      </div>
+    </div>
+    <div class="fgroup">
+      <span class="flabel">Beach</span>
+      <select id="beachSel"><option value="all">All beaches</option></select>
+    </div>
+    <div class="countline"><b id="shownN">0</b> of 621 sightings shown &nbsp; <button class="reset" id="resetBtn">reset</button></div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="p-title">Where they land <span class="p-note">dot size = sightings · colour = peak season · whisker = facing</span></div>
+      <svg class="map" id="map" viewBox="0 0 620 740"></svg>
+      <div class="legend">
+        <span><i style="background:var(--spring)"></i>Spring</span>
+        <span><i style="background:var(--summer)"></i>Summer</span>
+        <span><i style="background:var(--autumn)"></i>Autumn</span>
+        <span><i style="background:var(--winter)"></i>Winter</span>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="panel">
+        <div class="p-title">When &mdash; by month <span class="p-note">click a month to filter</span></div>
+        <div class="mrow" id="monthRow"></div>
+        <div class="mlabels" id="monthLabels"></div>
+      </div>
+      <div class="panel">
+        <div class="p-title">Top beaches <span class="p-note">click to focus</span></div>
+        <div class="bars" id="beachBars"></div>
+      </div>
+      <div class="panel">
+        <div class="p-title">By year <span class="p-note">rising line = iNaturalist growth, not just more bluebottles</span></div>
+        <div class="bars" id="yearBars"></div>
+      </div>
+      <div class="panel">
+        <div class="p-title">Time of day <span class="p-note">peaks when people are on the beach, not when they arrive</span></div>
+        <div class="bars" id="hourBars"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="p-title">Every beach <span class="p-note">click a row to focus · click a header to sort</span></div>
+    <table id="beachTable">
+      <thead><tr>
+        <th data-sort="name">Beach</th><th data-sort="region">Region</th>
+        <th data-sort="aspect">Faces</th><th data-sort="n">Sightings</th><th data-sort="season">Peak season</th>
+      </tr></thead>
+      <tbody id="beachTbody"></tbody>
+    </table>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="p-title"><span><span class="dot-live"></span>Live community taps &mdash; Cabbage Tree Bay</span> <span class="p-note">separate from the historical data above</span></div>
+    <div class="live-row" id="liveRow">
+      <div class="live-note">Checking Supabase&hellip;</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>How to read this.</b> The map and charts are a <b>relative pattern</b>, not a probability &mdash; iNaturalist is presence-only, so a beach with more dots may just have more people with phones. The forecast model in the app corrects for this with a matched case&ndash;control design; this explorer is the raw picture behind it. Two real signals survive that caveat: <b>facing direction</b> (most beaches open ESE 100&ndash;120&deg;, but Malabar, Cabbage Tree Bay and Shelly face NE and peak in a different season) and the <b>north&ndash;east seasonal split</b> (northern beaches peak in spring, the eastern ones in autumn). 84 records carried only a fuzzy &ldquo;Sydney&rdquo; location and aren&rsquo;t mapped. Source: iNaturalist genus <i>Physalia</i>, Cronulla&rarr;Palm Beach, 2011&ndash;2026.
+  </div>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = {"beaches":[{"name":"Palm Beach","lat":-33.598,"lng":151.326,"aspect":100,"region":"north","x":489.7,"y":115.2},{"name":"Whale Beach","lat":-33.613,"lng":151.333,"aspect":95,"region":"north","x":504.2,"y":133.0},{"name":"Avalon","lat":-33.635,"lng":151.33,"aspect":105,"region":"north","x":498.0,"y":159.2},{"name":"Bilgola","lat":-33.646,"lng":151.326,"aspect":100,"region":"north","x":489.7,"y":172.2},{"name":"Newport","lat":-33.656,"lng":151.323,"aspect":100,"region":"north","x":483.5,"y":184.1},{"name":"Mona Vale","lat":-33.679,"lng":151.308,"aspect":105,"region":"north","x":452.5,"y":211.5},{"name":"Warriewood","lat":-33.693,"lng":151.305,"aspect":110,"region":"north","x":446.3,"y":228.1},{"name":"Narrabeen","lat":-33.71,"lng":151.299,"aspect":110,"region":"north","x":433.9,"y":248.3},{"name":"Collaroy","lat":-33.733,"lng":151.301,"aspect":105,"region":"north","x":438.1,"y":275.6},{"name":"Dee Why","lat":-33.753,"lng":151.298,"aspect":100,"region":"north","x":431.9,"y":299.4},{"name":"Curl Curl","lat":-33.771,"lng":151.296,"aspect":95,"region":"north","x":427.7,"y":320.8},{"name":"Freshwater","lat":-33.781,"lng":151.292,"aspect":90,"region":"north","x":419.5,"y":332.7},{"name":"Manly","lat":-33.796,"lng":151.288,"aspect":85,"region":"north","x":411.2,"y":350.5},{"name":"Cabbage Tree Bay","lat":-33.7998,"lng":151.29,"aspect":55,"region":"north","x":415.3,"y":355.0},{"name":"Shelly Beach","lat":-33.8018,"lng":151.2955,"aspect":20,"region":"north","x":426.7,"y":357.4},{"name":"Bondi","lat":-33.8915,"lng":151.2767,"aspect":120,"region":"east","x":387.8,"y":464.0},{"name":"Tamarama","lat":-33.899,"lng":151.271,"aspect":115,"region":"east","x":376.1,"y":473.0},{"name":"Bronte","lat":-33.903,"lng":151.268,"aspect":110,"region":"east","x":369.9,"y":477.7},{"name":"Clovelly","lat":-33.914,"lng":151.267,"aspect":90,"region":"east","x":367.8,"y":490.8},{"name":"Coogee","lat":-33.92,"lng":151.258,"aspect":105,"region":"east","x":349.2,"y":497.9},{"name":"Maroubra","lat":-33.95,"lng":151.257,"aspect":100,"region":"east","x":347.1,"y":533.6},{"name":"Malabar","lat":-33.968,"lng":151.251,"aspect":70,"region":"east","x":334.7,"y":555.0},{"name":"Cronulla","lat":-34.057,"lng":151.156,"aspect":110,"region":"south","x":138.4,"y":660.8}],"records":[[0,11,2012,5],[12,11,2011,5],[8,2,2016,-1],[14,10,2015,7],[12,11,2016,-1],[18,4,2017,14],[13,5,2017,-1],[14,12,2011,12],[14,10,2017,18],[21,11,2017,22],[8,11,2011,18],[22,2,2018,-1],[14,2,2018,18],[22,9,2015,11],[20,2,2018,18],[20,10,2017,12],[21,2,2018,16],[15,2,2018,16],[15,1,2016,17],[15,1,2016,17],[15,1,2016,12],[13,10,2018,7],[20,4,2018,18],[15,11,2018,12],[16,11,2018,17],[15,6,2017,22],[8,12,2018,12],[0,1,2019,17],[8,2,2019,10],[16,3,2019,18],[21,6,2019,10],[12,10,2014,19],[16,9,2015,19],[22,9,2019,8],[20,9,2019,-1],[8,9,2019,15],[8,9,2019,15],[8,9,2019,15],[20,9,2019,17],[12,9,2019,8],[14,9,2019,8],[5,9,2019,14],[20,10,2019,16],[19,10,2019,14],[19,10,2019,14],[19,10,2019,14],[20,12,2019,8],[12,2,2020,16],[5,2,2020,13],[13,3,2020,11],[0,2,2018,5],[20,6,2020,14],[22,7,2020,9],[13,7,2020,11],[10,6,2020,15],[21,8,2020,13],[21,8,2020,13],[21,8,2020,13],[22,8,2020,8],[22,8,2020,15],[8,9,2020,15],[8,9,2020,15],[8,9,2020,15],[8,9,2020,16],[8,9,2020,16],[8,9,2020,16],[8,9,2020,16],[8,9,2020,17],[8,9,2020,16],[18,9,2020,21],[15,10,2020,12],[22,11,2020,14],[20,11,2020,17],[8,10,2020,18],[10,11,2020,12],[10,10,2020,15],[10,10,2020,16],[10,10,2020,16],[10,10,2020,16],[10,10,2020,16],[10,10,2020,16],[10,10,2020,16],[10,10,2020,16],[10,10,2020,16],[10,10,2020,17],[10,10,2020,17],[10,10,2020,17],[10,10,2020,16],[10,10,2020,16],[10,10,2020,16],[10,10,2020,16],[8,11,2020,16],[8,11,2020,16],[8,11,2020,16],[8,11,2020,16],[8,11,2020,16],[8,11,2020,16],[8,11,2020,16],[8,11,2020,17],[8,11,2020,17],[8,11,2020,17],[13,11,2020,17],[13,11,2020,17],[13,11,2020,17],[14,11,2020,18],[21,12,2020,10],[21,12,2015,14],[21,1,2021,11],[21,1,2021,11],[21,1,2021,12],[19,1,2021,16],[22,2,2021,7],[13,2,2021,6],[8,1,2021,17],[8,1,2021,17],[8,1,2021,17],[21,2,2021,11],[12,12,2019,15],[7,3,2021,11],[8,2,2021,16],[8,2,2021,16],[7,3,2021,15],[7,3,2021,16],[8,4,2021,12],[6,4,2021,3],[19,2,2021,8],[19,2,2021,8],[18,2,2021,11],[12,9,2021,7],[19,1,2018,11],[18,11,2020,14],[8,10,2021,17],[21,10,2021,13],[22,10,2021,6],[19,10,2021,8],[6,10,2021,13],[22,11,2021,7],[17,1,2022,18],[18,12,2021,13],[22,1,2022,16],[19,1,2022,15],[19,1,2022,8],[14,2,2022,7],[19,3,2022,9],[12,3,2022,8],[12,7,2022,12],[21,7,2022,11],[21,7,2022,12],[15,2,2021,13],[14,9,2022,12],[20,9,2022,17],[8,9,2022,15],[8,9,2022,16],[22,11,2021,11],[20,10,2022,15],[8,10,2022,15],[21,10,2022,9],[20,10,2022,-1],[11,10,2022,10],[16,10,2022,15],[20,10,2022,10],[21,10,2022,9],[8,10,2022,2],[20,10,2022,11],[20,10,2022,10],[8,10,2022,11],[8,10,2022,12],[8,10,2022,12],[8,10,2022,12],[8,10,2022,12],[8,10,2022,12],[8,10,2022,13],[20,10,2022,13],[20,10,2022,13],[20,10,2022,9],[19,10,2022,8],[20,10,2022,10],[20,10,2022,12],[20,10,2022,11],[20,10,2022,-1],[12,10,2022,15],[20,10,2022,16],[20,10,2022,16],[20,10,2022,17],[20,10,2022,17],[19,10,2022,19],[20,10,2022,14],[20,10,2022,13],[20,10,2022,14],[20,11,2022,10],[20,11,2022,11],[20,11,2022,9],[21,12,2015,-1],[15,2,2006,16],[20,11,2022,11],[20,12,2022,9],[20,11,2022,9],[20,12,2022,13],[20,12,2022,11],[20,12,2022,10],[9,0,0,-1],[20,12,2022,13],[5,12,2022,8],[17,10,2022,10],[20,12,2022,17],[15,12,2022,16],[6,12,2022,15],[21,12,2022,16],[14,12,2022,8],[13,12,2022,9],[11,10,2022,7],[21,12,2022,18],[0,10,2022,8],[18,12,2022,10],[14,12,2022,18],[13,1,2023,17],[7,7,2022,16],[8,1,2023,8],[8,1,2023,7],[14,12,2022,7],[12,2,2023,19],[19,2,2023,12],[8,2,2023,12],[8,10,2022,16],[8,10,2022,16],[8,10,2022,16],[5,3,2023,19],[8,10,2022,17],[8,10,2022,17],[12,10,2022,15],[20,2,2023,17],[8,2,2023,16],[12,2,2023,10],[1,4,2023,14],[22,12,2022,13],[20,4,2023,9],[22,6,2023,11],[20,6,2023,12],[17,10,2022,14],[19,9,2015,12],[0,12,2017,15],[14,9,2023,12],[20,9,2023,14],[8,9,2023,16],[14,10,2023,9],[8,1,2023,17],[15,10,2023,18],[16,10,2023,16],[15,10,2023,13],[15,10,2023,13],[13,10,2023,12],[8,10,2023,17],[18,10,2023,9],[16,10,2023,14],[12,10,2023,13],[19,10,2023,18],[8,10,2023,9],[5,10,2023,14],[5,10,2023,14],[13,10,2023,6],[12,11,2023,8],[12,11,2023,8],[18,11,2023,15],[17,11,2023,16],[19,11,2023,8],[13,11,2007,14],[5,11,2023,11],[15,11,2023,10],[0,11,2023,11],[19,11,2023,17],[19,11,2023,17],[13,11,2023,6],[16,10,2023,13],[16,10,2023,13],[8,11,2023,11],[11,12,2023,17],[11,12,2023,17],[16,12,2023,17],[12,3,2018,15],[18,1,2024,19],[17,1,2024,18],[20,1,2024,-1],[21,1,2024,15],[13,1,2024,17],[8,1,2024,-1],[21,1,2024,7],[21,1,2024,7],[5,4,2023,15],[13,2,2024,17],[15,2,2024,17],[21,2,2024,13],[21,2,2024,17],[20,2,2024,9],[12,2,2024,7],[20,2,2024,9],[20,2,2024,10],[19,2,2024,14],[20,3,2024,17],[6,10,2022,9],[15,3,2024,7],[20,3,2024,9],[15,3,2024,12],[6,3,2024,-1],[20,3,2024,10],[20,3,2024,16],[21,3,2024,18],[21,3,2024,18],[21,3,2024,18],[21,3,2024,18],[18,3,2024,16],[18,3,2024,16],[18,3,2024,17],[12,3,2024,11],[20,3,2024,14],[15,3,2024,15],[11,3,2024,17],[20,3,2024,16],[20,4,2024,14],[20,4,2024,8],[20,4,2024,16],[19,4,2024,15],[20,4,2024,14],[22,4,2024,17],[20,4,2024,16],[20,5,2024,13],[20,5,2024,10],[22,5,2024,15],[14,3,2024,11],[14,3,2024,12],[14,3,2024,12],[20,5,2024,17],[15,0,0,-1],[9,12,2022,1],[8,12,2022,1],[8,5,2024,17],[9,7,2024,7],[15,7,2024,14],[16,7,2024,10],[16,7,2024,10],[20,7,2024,15],[8,7,2024,14],[21,7,2024,9],[21,7,2024,9],[16,7,2024,10],[16,7,2024,10],[9,7,2024,6],[15,9,2024,10],[6,9,2024,14],[19,9,2024,11],[8,9,2024,12],[15,10,2024,15],[21,10,2024,13],[17,10,2024,5],[19,10,2024,10],[19,10,2024,10],[19,10,2024,10],[8,9,2024,12],[8,9,2024,12],[21,10,2024,13],[14,10,2024,13],[13,10,2024,15],[8,10,2024,13],[19,10,2022,13],[22,10,2024,13],[15,10,2024,13],[15,10,2024,8],[15,10,2024,8],[15,10,2024,8],[15,10,2024,8],[15,10,2024,8],[15,10,2024,8],[18,10,2024,15],[10,10,2024,-1],[22,10,2024,10],[19,10,2024,11],[12,10,2024,13],[13,10,2024,10],[22,10,2024,15],[9,10,2024,10],[22,10,2024,-1],[21,10,2024,18],[16,10,2024,17],[22,10,2024,16],[22,10,2024,16],[22,10,2024,17],[8,9,2024,12],[16,10,2024,17],[8,10,2024,7],[9,10,2024,-1],[9,11,2024,18],[19,11,2024,16],[22,11,2024,13],[14,11,2024,15],[16,11,2024,19],[10,11,2024,15],[0,11,2024,13],[8,11,2024,8],[13,10,2024,8],[13,10,2024,7],[8,11,2024,16],[19,10,2024,12],[6,10,2024,12],[6,10,2024,12],[6,10,2024,12],[15,11,2024,12],[13,11,2024,16],[19,11,2024,13],[20,8,2023,8],[21,11,2024,13],[19,11,2024,8],[21,11,2024,13],[8,12,2024,7],[0,11,2024,19],[11,12,2024,-1],[6,12,2024,9],[17,12,2024,-1],[16,12,2024,13],[18,12,2024,16],[10,12,2024,12],[8,12,2024,6],[22,12,2024,19],[8,12,2024,6],[19,1,2025,-1],[13,1,2025,9],[20,1,2025,11],[21,1,2025,13],[11,1,2025,14],[21,7,2024,13],[21,7,2024,13],[12,1,2025,16],[20,1,2025,9],[13,1,2025,15],[12,1,2025,-1],[8,1,2025,17],[8,11,2016,9],[22,2,2017,11],[21,1,2025,20],[19,1,2025,0],[5,12,2024,12],[11,2,2025,16],[19,2,2025,-1],[14,2,2025,16],[19,2,2025,6],[14,0,0,-1],[20,2,2025,11],[22,2,2025,-1],[13,2,2025,15],[13,2,2025,15],[13,2,2025,15],[13,2,2025,15],[20,2,2025,8],[21,2,2025,11],[8,2,2025,16],[9,2,2025,14],[15,3,2025,8],[20,2,2025,-1],[8,3,2025,18],[8,3,2025,17],[19,3,2025,18],[0,3,2025,16],[19,3,2025,21],[19,3,2025,17],[12,3,2025,11],[12,3,2025,11],[22,3,2025,18],[18,3,2025,14],[5,3,2025,18],[15,3,2025,13],[18,3,2025,17],[18,3,2025,17],[18,3,2025,16],[18,3,2025,16],[18,3,2025,16],[18,3,2025,17],[18,3,2025,17],[19,3,2025,16],[19,3,2025,17],[19,3,2025,17],[19,3,2025,17],[19,3,2025,17],[11,3,2025,8],[22,12,2024,12],[19,3,2025,20],[12,3,2025,18],[19,3,2025,10],[19,3,2025,19],[19,3,2025,17],[15,3,2025,17],[16,3,2025,15],[17,10,2024,12],[19,11,2024,13],[18,3,2025,17],[12,3,2025,14],[15,3,2025,11],[8,3,2025,9],[8,3,2025,9],[15,3,2025,15],[15,2,2025,11],[8,3,2025,15],[19,3,2025,13],[19,3,2025,21],[15,3,2025,10],[15,3,2025,10],[15,3,2025,10],[15,3,2025,12],[15,3,2025,15],[15,3,2025,12],[15,3,2025,14],[15,3,2025,15],[15,3,2025,12],[20,0,0,-1],[17,3,2025,16],[20,0,0,-1],[15,3,2025,13],[17,3,2025,12],[20,4,2025,15],[11,12,2024,19],[20,4,2025,11],[15,4,2025,15],[12,3,2025,15],[16,5,2025,13],[0,11,2023,16],[8,10,2022,13],[21,11,2024,14],[18,3,2025,13],[15,1,2011,-1],[15,1,2011,-1],[8,1,2025,16],[20,8,2025,16],[19,8,2025,14],[19,8,2025,10],[0,2,2025,17],[22,10,2025,11],[20,10,2025,-1],[20,10,2025,-1],[22,12,2011,21],[22,12,2011,21],[15,3,2010,7],[18,7,2024,16],[3,1,2025,15],[15,12,2025,18],[15,11,2024,15],[3,12,2025,13],[15,12,2025,8],[21,12,2025,15],[21,12,2025,17],[21,12,2025,17],[13,12,2025,17],[5,12,2025,15],[5,12,2025,15],[5,12,2025,15],[15,1,2026,15],[8,1,2026,16],[15,8,2025,14],[18,1,2026,8],[22,1,2026,16],[11,1,2026,17],[15,1,2026,13],[20,1,2026,16],[21,1,2026,16],[5,1,2026,19],[8,1,2026,19],[21,1,2026,-1],[10,1,2026,7],[21,1,2026,19],[19,1,2026,-1],[12,1,2026,-1],[8,1,2026,17],[17,2,2026,14],[19,3,2026,10],[19,3,2026,10],[19,3,2026,10],[21,3,2026,11],[21,3,2026,8],[21,3,2026,8],[15,3,2026,17],[17,10,2024,21],[8,4,2026,4],[9,1,2026,18],[8,1,2026,18],[22,4,2026,7],[18,4,2026,7],[19,4,2026,-1],[20,5,2026,13],[20,5,2026,13],[20,5,2026,13],[20,5,2026,13],[20,5,2026,13],[20,5,2026,13],[20,5,2026,13],[20,5,2026,13],[20,5,2026,14],[13,5,2026,9],[14,5,2026,10],[19,5,2026,-1],[18,5,2026,13],[12,8,2020,11],[18,5,2026,9],[15,5,2026,10],[8,5,2026,11],[21,5,2026,-1],[8,5,2026,11],[8,5,2026,11],[8,5,2026,11],[20,11,2023,17],[15,5,2026,12],[18,5,2026,16],[21,5,2026,12],[21,5,2026,12],[21,5,2026,12],[21,5,2026,12],[10,5,2026,13],[6,5,2026,14],[6,5,2026,14],[6,5,2026,14],[20,5,2026,14],[15,4,2026,16],[9,7,2026,10],[20,7,2026,16],[20,7,2026,7],[20,7,2026,14]]};
+const B = DATA.beaches, R = DATA.records;   // record = [beachIdx, month, year, hour]
+const SEASON_OF = m => (m>=9&&m<=11)?'spring':(m===12||m<=2)?'summer':(m>=3&&m<=5)?'autumn':'winter';
+const SC = {spring:'#4caf50',summer:'#c9c246',autumn:'#e08a3c',winter:'#4a8fad'};
+const MN = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const FACE = a => a<68?'NE':a<113?'E':'SE';
+
+let state = {season:'all', region:'all', beach:'all', month:null, sort:'n', dir:-1};
+
+const beachSel = document.getElementById('beachSel');
+[...B.keys()].sort((a,b)=>B[a].name.localeCompare(B[b].name)).forEach(i=>{
+  const o=document.createElement('option'); o.value=i; o.textContent=B[i].name; beachSel.appendChild(o);
+});
+
+function passRegionBeach(rec){
+  const b = B[rec[0]];
+  if(state.region!=='all' && b.region!==state.region) return false;
+  if(state.beach!=='all' && rec[0]!==+state.beach) return false;
+  return true;
+}
+function filtered(){
+  return R.filter(r=>{
+    if(!passRegionBeach(r)) return false;
+    if(state.season!=='all' && SEASON_OF(r[1])!==state.season) return false;
+    if(state.month!==null && r[1]!==state.month) return false;
+    return true;
+  });
+}
+function domSeason(recs){
+  const c={spring:0,summer:0,autumn:0,winter:0};
+  recs.forEach(r=>c[SEASON_OF(r[1])]++);
+  let best='spring',bv=-1; for(const k in c) if(c[k]>bv){bv=c[k];best=k;}
+  return recs.length?best:null;
+}
+
+function renderKPIs(recs){
+  const byBeach={}; recs.forEach(r=>byBeach[r[0]]=(byBeach[r[0]]||0)+1);
+  const beachesHit = Object.keys(byBeach).length;
+  let topB='—',topBv=-1; for(const k in byBeach) if(byBeach[k]>topBv){topBv=byBeach[k];topB=B[k].name;}
+  const mc={}; recs.forEach(r=>mc[r[1]]=(mc[r[1]]||0)+1);
+  let pk=0,pkv=-1; for(const k in mc) if(mc[k]>pkv){pkv=mc[k];pk=+k;}
+  const ds = domSeason(recs);
+  document.getElementById('kpis').innerHTML = [
+    ['Sightings', recs.length, 'in current filter'],
+    ['Beaches', beachesHit, 'with a record'],
+    ['Peak month', pk?MN[pk]:'—', pkv>0?pkv+' sightings':''],
+    ['Hotspot', topB, topBv>0?topBv+' sightings':''],
+  ].map(([l,v,s])=>`<div class="kpi"><div class="k-l">${l}</div><div class="k-v" style="${l==='Peak month'&&ds?'color:'+SC[ds]:''}">${v}</div><div class="k-s">${s}</div></div>`).join('');
+}
+
+function renderMap(recs){
+  const cnt={}, seas={};
+  recs.forEach(r=>{ cnt[r[0]]=(cnt[r[0]]||0)+1; });
+  B.forEach((b,i)=>{ seas[i]=domSeason(recs.filter(r=>r[0]===i)); });
+  const max = Math.max(1,...Object.values(cnt));
+  let s='';
+  s+=`<text x="470" y="52" fill="#7fa0ad" font-size="12" font-family="Inter">open sea →</text>`;
+  B.forEach((b,i)=>{
+    const n=cnt[i]||0;
+    const r = n? 5+Math.sqrt(n/max)*17 : 3.5;
+    const col = n? SC[seas[i]] : 'transparent';
+    const stroke = n? 'none' : 'rgba(122,160,173,.4)';
+    const L=r+11, rad=b.aspect*Math.PI/180;
+    const wx=b.x+Math.sin(rad)*L, wy=b.y-Math.cos(rad)*L;
+    const isSel = state.beach!=='all' && +state.beach===i;
+    const ring = (b.name==='Cabbage Tree Bay')? `<circle cx="${b.x}" cy="${b.y}" r="${r+3}" fill="none" stroke="#dfe8ec" stroke-width="1.5" opacity=".55"/>`:'';
+    s+=`<g class="bdot" data-i="${i}" onmousemove="showTip(event,${i},${n})" onmouseleave="hideTip()" onclick="focusBeach(${i})">`;
+    if(n) s+=`<line x1="${b.x}" y1="${b.y}" x2="${wx.toFixed(1)}" y2="${wy.toFixed(1)}" stroke="#8aa" stroke-width="1.3" opacity=".7"/>`;
+    s+=ring;
+    s+=`<circle cx="${b.x}" cy="${b.y}" r="${r.toFixed(1)}" fill="${col}" stroke="${stroke}" stroke-width="1" ${isSel?'stroke="#dfe8ec" stroke-width="2.5"':''}/></g>`;
+  });
+  // label the biggest few, on the land (left) side
+  const top = Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,6).map(e=>+e[0]);
+  top.forEach(i=>{ const b=B[i]; const n=cnt[i]||0;
+    s+=`<text x="${b.x-12}" y="${b.y+3}" text-anchor="end" fill="#cfe0e8" font-size="11.5" font-family="Inter" font-weight="500" pointer-events="none">${b.name.replace(' Beach','')} ${n}</text>`;
+  });
+  s+=`<text x="60" y="710" fill="#7fa0ad" font-size="11" font-family="Inter">N ↑ · positions are real coordinates</text>`;
+  document.getElementById('map').innerHTML=s;
+}
+
+function showTip(e,i,n){
+  const b=B[i], t=document.getElementById('tip');
+  const recs=filtered().filter(r=>r[0]===i);
+  const ds=domSeason(recs);
+  t.innerHTML=`<b>${b.name}</b><br>${n} sighting${n===1?'':'s'} in filter<br>faces ${FACE(b.aspect)} (${b.aspect}°)${ds?'<br>peak: '+ds:''}`;
+  t.style.left=Math.min(e.clientX+14, innerWidth-190)+'px';
+  t.style.top=(e.clientY+14)+'px'; t.style.opacity=1;
+}
+function hideTip(){ document.getElementById('tip').style.opacity=0; }
+
+function barChart(el, items, opt={}){
+  const max=Math.max(1,...items.map(d=>d.v));
+  el.innerHTML=items.map(d=>`
+    <div class="bar-row ${opt.mutedIf&&opt.mutedIf(d)?'muted':''}" ${d.click?`onclick="${d.click}"`:''}>
+      <span class="bl" title="${d.l}">${d.l}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${d.v/max*100}%;background:${d.c||'var(--ocean)'}"></div></div>
+      <span class="bv">${d.v}</span>
+    </div>`).join('');
+}
+
+function renderMonths(){
+  // month histogram ignores its own month filter (so you can see all bars) but respects region/beach/season
+  const base=R.filter(r=>{ if(!passRegionBeach(r))return false;
+    if(state.season!=='all'&&SEASON_OF(r[1])!==state.season)return false; return true; });
+  const c={}; for(let m=1;m<=12;m++)c[m]=0; base.forEach(r=>c[r[1]]++);
+  const max=Math.max(1,...Object.values(c));
+  const row=document.getElementById('monthRow'), lab=document.getElementById('monthLabels');
+  row.innerHTML=''; lab.innerHTML='';
+  for(let m=1;m<=12;m++){
+    const d=document.createElement('div'); d.className='mcell'+(state.month&&state.month!==m?' off':'');
+    d.style.height=Math.max(3,c[m]/max*96)+'px';
+    d.style.background=SC[SEASON_OF(m)];
+    d.title=MN[m]+': '+c[m];
+    d.onclick=()=>{ state.month = state.month===m?null:m; render(); };
+    row.appendChild(d);
+    const sp=document.createElement('span'); sp.textContent=MN[m][0]; lab.appendChild(sp);
+  }
+}
+
+function render(){
+  // sync chips/select
+  document.querySelectorAll('#seasonChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.season===state.season));
+  document.querySelectorAll('#regionChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.region===state.region));
+  beachSel.value=state.beach;
+
+  const recs=filtered();
+  document.getElementById('shownN').textContent=recs.length;
+  renderKPIs(recs);
+  renderMap(recs);
+  renderMonths();
+
+  // top beaches
+  const bc={}; recs.forEach(r=>bc[r[0]]=(bc[r[0]]||0)+1);
+  const items=Object.entries(bc).sort((a,b)=>b[1]-a[1]).slice(0,10)
+    .map(([i,v])=>({l:B[i].name.replace(' Beach',''),v,c:SC[domSeason(recs.filter(r=>r[0]===+i))],click:`focusBeach(${i})`}));
+  barChart(document.getElementById('beachBars'), items);
+
+  // year
+  const yc={}; recs.forEach(r=>{if(r[2])yc[r[2]]=(yc[r[2]]||0)+1;});
+  const yrs=[]; for(let y=2011;y<=2026;y++)yrs.push({l:''+y,v:yc[y]||0,c:'var(--ocean)'});
+  barChart(document.getElementById('yearBars'), yrs);
+
+  // hour
+  const hc={}; recs.forEach(r=>{if(r[3]>=0)hc[r[3]]=(hc[r[3]]||0)+1;});
+  const hrs=[]; for(let h=5;h<=19;h++)hrs.push({l:(h<10?'0':'')+h+':00',v:hc[h]||0,c:h>=5&&h<11?'var(--spring)':'var(--ocean)'});
+  barChart(document.getElementById('hourBars'), hrs);
+
+  renderTable(recs);
+}
+
+function renderTable(recs){
+  const bc={}; recs.forEach(r=>bc[r[0]]=(bc[r[0]]||0)+1);
+  let rowsD=B.map((b,i)=>({i,name:b.name,region:b.region,aspect:b.aspect,
+    n:bc[i]||0,season:domSeason(recs.filter(r=>r[0]===i))}));
+  const s=state.sort, dir=state.dir;
+  rowsD.sort((a,b)=>{ let x=a[s],y=b[s];
+    if(s==='name'||s==='region'){x=(''+x);y=(''+y);return dir*x.localeCompare(y);}
+    if(s==='season'){x=x||'';y=y||'';return dir*(''+x).localeCompare(''+y);}
+    return dir*((x||0)-(y||0)); });
+  document.getElementById('beachTbody').innerHTML=rowsD.map(d=>`
+    <tr class="brow ${state.beach!=='all'&&+state.beach===d.i?'sel':''}" onclick="focusBeach(${d.i})">
+      <td>${d.name}</td>
+      <td><span class="rtag">${d.region==='north'?'Northern':d.region==='east'?'Eastern':'South'}</span></td>
+      <td>${FACE(d.aspect)} <span style="color:var(--dim)">${d.aspect}°</span></td>
+      <td style="font-variant-numeric:tabular-nums">${d.n}</td>
+      <td>${d.season?`<span class="season-dot" style="background:${SC[d.season]}"></span>${d.season}`:'<span style="color:var(--dim)">—</span>'}</td>
+    </tr>`).join('');
+}
+
+window.focusBeach = i => { state.beach = (state.beach==+i)?'all':(''+i); render(); };
+
+document.getElementById('seasonChips').onclick=e=>{if(e.target.dataset.season){state.season=e.target.dataset.season;state.month=null;render();}};
+document.getElementById('regionChips').onclick=e=>{if(e.target.dataset.region){state.region=e.target.dataset.region;state.beach='all';render();}};
+beachSel.onchange=()=>{state.beach=beachSel.value;render();};
+document.getElementById('resetBtn').onclick=()=>{state={season:'all',region:'all',beach:'all',month:null,sort:'n',dir:-1};render();};
+document.querySelectorAll('#beachTable th').forEach(th=>th.onclick=()=>{
+  const s=th.dataset.sort; state.dir=(state.sort===s)?-state.dir:(s==='name'||s==='region'?1:-1); state.sort=s; render();
+});
+
+// ---- live community taps (best-effort, public read key) ----
+(async()=>{
+  const SB='https://gkspukabnfbzrvjoewpc.supabase.co';
+  const KEY='sb_publishable_TkhnIKIYdRCNQ-DSVLqjLw_dTMcLIqW';
+  const el=document.getElementById('liveRow');
+  try{
+    const since=new Date(Date.now()-30*864e5).toISOString();
+    const res=await fetch(`${SB}/rest/v1/bluebottle_reports?select=reported_at,photo_url&reported_at=gte.${since}&order=reported_at.desc`,
+      {headers:{apikey:KEY,Authorization:'Bearer '+KEY}});
+    if(!res.ok) throw new Error(res.status);
+    const rows=await res.json();
+    const days={}; rows.forEach(r=>{const d=r.reported_at.slice(0,10);days[d]=(days[d]||0)+1;});
+    const spark=[]; for(let i=29;i>=0;i--){const d=new Date(Date.now()-i*864e5).toISOString().slice(0,10);spark.push(days[d]||0);}
+    const mx=Math.max(1,...spark);
+    const withPhoto=rows.filter(r=>r.photo_url).length;
+    const last=rows[0]?new Date(rows[0].reported_at):null;
+    const ago=last?Math.round((Date.now()-last)/36e5):null;
+    el.innerHTML=`
+      <div class="live-big">${rows.length}</div>
+      <div class="live-note">tap${rows.length===1?'':'s'} in the last 30 days<br>${withPhoto} with a photo${last?` · last ${ago<24?ago+'h':Math.round(ago/24)+'d'} ago`:''}</div>
+      <div class="spark">${spark.map(v=>`<i style="height:${Math.max(2,v/mx*40)}px"></i>`).join('')}</div>`;
+  }catch(err){
+    el.innerHTML=`<div class="live-note">Couldn't reach live reports (${err.message}). The historical data above is unaffected.</div>`;
+  }
+})();
+
+render();
+</script>
+</body>
+</html>
