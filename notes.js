@@ -23,7 +23,9 @@
                    CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY.indexOf('YOUR-') === -1;
   var BUCKET = 'travel-photos';
 
-  var state = { sb: null, uid: null, remote: [], profiles: {}, profilesByName: {}, syncing: false, attempts: {}, booted: false };
+  var state = { sb: null, uid: null, remote: [], profiles: {}, profilesByName: {}, reactions: {}, replies: {}, syncing: false, attempts: {}, booted: false };
+  var REACTIONS = ['❤️', '😂', '🔥', '👏'];
+  function clientId() { var c = localStorage.getItem('travel_client'); if (!c) { c = uuid(); localStorage.setItem('travel_client', c); } return c; }
 
   function t(k, v) { return I18N ? I18N.t(k, v) : k; }
   function lang() { return I18N ? I18N.lang : 'en'; }
@@ -239,6 +241,26 @@
       state.sb.functions.invoke('translate-note', { body: { id: n.id } }).catch(function () {});
     });
   }
+  function fetchReactions() {
+    if (!state.sb) return Promise.resolve();
+    return state.sb.from('reactions').select('note_id,emoji,client_id').then(function (res) {
+      if (!res.error && res.data) {
+        var m = {}; res.data.forEach(function (r) { (m[r.note_id] = m[r.note_id] || []).push(r); });
+        state.reactions = m; renderAll();
+      }
+    }).catch(function () {});
+  }
+  function fetchReplies() {
+    if (!state.sb) return Promise.resolve();
+    return state.sb.from('note_replies').select('note_id,author,body,created_at').then(function (res) {
+      if (!res.error && res.data) {
+        var m = {}; res.data.forEach(function (r) { (m[r.note_id] = m[r.note_id] || []).push(r); });
+        state.replies = m; renderAll();
+      }
+    }).catch(function () {});
+  }
+  function fetchSocial() { return Promise.all([fetchReactions(), fetchReplies()]); }
+
   function fetchProfiles() {
     if (!state.sb) return Promise.resolve();
     return state.sb.from('profiles').select('*')
@@ -312,12 +334,15 @@
 
   // upsert a row; if the DB doesn't have avatar_path yet, retry without it so
   // posting never breaks before the one-line ALTER is run.
+  // upsert; if the DB is missing a column (e.g. avatar_path/audio_path not yet
+  // migrated), strip the named column and retry so posting never breaks.
   function upsertRow(row) {
     return state.sb.from('travel_notes').upsert(row).then(function (res) {
-      if (res.error && row.avatar_path !== undefined &&
-          (/avatar_path/.test(res.error.message || '') || res.error.code === 'PGRST204')) {
-        var r2 = Object.assign({}, row); delete r2.avatar_path;
-        return state.sb.from('travel_notes').upsert(r2);
+      if (res.error) {
+        var msg = res.error.message || '';
+        var m = msg.match(/'([a-z_]+)' column/) || msg.match(/column [\w".]*?([a-z_]+) does not exist/);
+        var col = m && m[1];
+        if (col && row[col] !== undefined) { var r2 = Object.assign({}, row); delete r2[col]; return upsertRow(r2); }
       }
       return res;
     });
@@ -347,6 +372,16 @@
       });
       return chain.then(function () {
         n.photo_paths = paths;
+        // upload a voice memory if one is attached and not yet uploaded
+        var audioP = Promise.resolve();
+        if (n.audio_blob && !n.audio_path) {
+          var ty = n.audio_blob.type || '';
+          var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
+          var apath = state.uid + '/' + n.id + '/audio.' + ext;
+          audioP = state.sb.storage.from(BUCKET).upload(apath, n.audio_blob, { contentType: ty || 'audio/mp4', upsert: true })
+            .then(function (res) { if (!res.error) n.audio_path = apath; }).catch(function () {});
+        }
+        return audioP.then(function () {
         // fill the author's avatar path (uploaded above) if we didn't have it yet
         if (!n.avatar_path && n.person_key) { var pr = personById(n.person_key); if (pr && pr.avatarPath) n.avatar_path = pr.avatarPath; }
         var row = {
@@ -354,7 +389,7 @@
           user_id: state.uid, lang: n.lang || lang(),
           body: n.body || '', body_en: n.body_en || '', body_it: n.body_it || '',
           photo_paths: paths, captured_at: n.captured_at, updated_at: nowISO(),
-          avatar_path: n.avatar_path || ''
+          avatar_path: n.avatar_path || '', audio_path: n.audio_path || ''
         };
         return upsertRow(row).then(function (res) {
           if (res.error) throw res.error;
@@ -363,6 +398,7 @@
             if (row.body) return state.sb.functions.invoke('translate-note', { body: { id: n.id } }).catch(function () {});
           });
         });
+        }); // audioP.then
       });
     });
   }
@@ -384,7 +420,7 @@
           return chain;
         });
       });
-    }).then(function () { return Promise.all([fetchRemote(), fetchProfiles()]); })
+    }).then(function () { return Promise.all([fetchRemote(), fetchProfiles(), fetchSocial()]); })
       .catch(function () {}).then(function () { state.syncing = false; renderAll(); });
   }
 
@@ -418,6 +454,28 @@
     var out = ''; (photos || []).forEach(function (p) { var url = URL.createObjectURL(p.blob); out += '<img src="' + url + '" data-full="' + url + '" alt="">'; }); return out;
   }
 
+  function audioHTML(n) {
+    if (n.audio_path) return '<audio class="note-audio" controls preload="none" src="' + esc(publicUrl(n.audio_path)) + '"></audio>';
+    if (n._local && n.audio_blob) { try { return '<audio class="note-audio" controls src="' + URL.createObjectURL(n.audio_blob) + '"></audio>'; } catch (e) {} }
+    return '';
+  }
+  function reactionsHTML(noteId) {
+    var list = state.reactions[noteId] || [], mine = clientId();
+    return '<div class="reacts" data-rnote="' + esc(noteId) + '">' + REACTIONS.map(function (em) {
+      var count = 0, on = false;
+      list.forEach(function (r) { if (r.emoji === em) { count++; if (r.client_id === mine) on = true; } });
+      return '<button type="button" class="react' + (on ? ' on' : '') + '" data-emoji="' + em + '">' +
+        em + (count ? '<span class="rc">' + count + '</span>' : '') + '</button>';
+    }).join('') + '</div>';
+  }
+  function repliesHTML(noteId) {
+    var list = (state.replies[noteId] || []).slice().sort(function (a, b) { return (a.created_at || '').localeCompare(b.created_at || ''); });
+    var items = list.map(function (r) { return '<div class="reply"><span class="reply-author">' + esc(r.author || '') + '</span> ' + esc(r.body) + '</div>'; }).join('');
+    return '<div class="replies" data-rpnote="' + esc(noteId) + '">' + items +
+      '<div class="reply-add"><input type="text" class="reply-in" placeholder="' + esc(t('reply_ph')) + '" maxlength="240">' +
+      '<button type="button" class="reply-send">' + esc(t('reply_send')) + '</button></div></div>';
+  }
+
   function renderDay(dayEl) {
     var dayKey = dayEl.dataset.date;
     var listEl = dayEl.querySelector('.note-list');
@@ -445,7 +503,8 @@
           '<span class="note-time">' + esc(fmtTime(n.captured_at)) + '</span>' + badges + '</div></div>' +
           (body.text ? '<div class="note-body">' + esc(body.text) + '</div>' : '') +
           (photoHTML(n) ? '<div class="note-photos">' + photoHTML(n) + '</div>' : '') +
-          actions + '</div>';
+          audioHTML(n) + actions +
+          reactionsHTML(n.id) + repliesHTML(n.id) + '</div>';
       }).join('');
       listEl.innerHTML = html;
 
@@ -487,7 +546,7 @@
   function openForm(dayEl, dayKey, editNote) {
     var notes = dayEl.querySelector('.notes');
     if (notes.querySelector('.note-form')) return;
-    var pending = [];
+    var pending = [], pendingAudio = null;
     var selectedId = editNote ? (editNote.person_key || '') : (activePerson() ? activePerson().id : '');
     var form = document.createElement('div');
     form.className = 'note-form';
@@ -500,6 +559,7 @@
       '<div class="hint">' + esc(t('form_hint')) + '</div>' +
       '<div class="file-row"><input type="file" accept="image/*" multiple></div>' +
       '<div class="thumbs"></div>' +
+      '<div class="voice-row"></div>' +
       '<div class="form-actions"><button class="save" type="button">' + esc(t('save_memory')) + '</button>' +
       '<button class="cancel" type="button">' + esc(t('cancel')) + '</button></div>';
     notes.insertBefore(form, notes.querySelector('.note-list'));
@@ -526,18 +586,40 @@
       var files = Array.prototype.slice.call(fileInput.files || []); fileInput.value = '';
       files.forEach(function (f) { shrink(f).then(function (blob) { var filename = uuid() + '.jpg', url = URL.createObjectURL(blob); pending.push({ blob: blob, filename: filename, url: url }); var img = document.createElement('img'); img.src = url; thumbs.appendChild(img); }); });
     });
-    form.querySelector('.cancel').addEventListener('click', function () { form.remove(); });
+    // voice recording (feature-detected; hidden where unsupported)
+    var rec = null;
+    var voiceRow = form.querySelector('.voice-row');
+    if (window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      voiceRow.innerHTML = '<button type="button" class="rec-btn">🎙 ' + esc(t('record')) + '</button><span class="rec-status"></span>';
+      var recBtn = voiceRow.querySelector('.rec-btn'), recStatus = voiceRow.querySelector('.rec-status'), chunks = [];
+      recBtn.addEventListener('click', function () {
+        if (rec && rec.state === 'recording') { rec.stop(); return; }
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+          chunks = []; rec = new MediaRecorder(stream);
+          rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+          rec.onstop = function () {
+            stream.getTracks().forEach(function (tk) { tk.stop(); });
+            pendingAudio = new Blob(chunks, { type: (rec.mimeType || 'audio/mp4') });
+            recBtn.textContent = '🎙 ' + t('rerecord');
+            try { recStatus.innerHTML = '<audio controls src="' + URL.createObjectURL(pendingAudio) + '"></audio>'; } catch (e) {}
+          };
+          rec.start(); recBtn.textContent = '⏹ ' + t('stop'); recStatus.textContent = t('recording');
+        }).catch(function () { recStatus.textContent = t('mic_denied'); });
+      });
+    }
+
+    form.querySelector('.cancel').addEventListener('click', function () { if (rec && rec.state === 'recording') rec.stop(); form.remove(); });
     form.querySelector('.save').addEventListener('click', function () {
       var body = ta.value.trim();
-      if (!body && !pending.length && !(editNote && (editNote.photo_paths || []).length)) { ta.focus(); return; }
+      if (!body && !pending.length && !pendingAudio && !(editNote && (editNote.photo_paths || []).length)) { ta.focus(); return; }
       var person = editNote ? null : (personById(selectedId) || activePerson());
       if (!editNote && person) setActive(person.id); // remember last writer
-      saveNote(dayKey, editNote, body, pending, person).then(function () { form.remove(); renderDay(dayEl); scheduleSync(); });
+      saveNote(dayKey, editNote, body, pending, person, pendingAudio).then(function () { form.remove(); renderDay(dayEl); scheduleSync(); });
     });
     ta.focus();
   }
 
-  function saveNote(dayKey, editNote, body, pendingPhotos, person) {
+  function saveNote(dayKey, editNote, body, pendingPhotos, person, pendingAudio) {
     var id = editNote ? editNote.id : uuid();
     var base;
     if (editNote) {
@@ -553,6 +635,7 @@
     }
     base.body = body;
     base.body_en = ''; base.body_it = ''; base.lang = lang(); // server auto-detects
+    if (pendingAudio) { base.audio_blob = pendingAudio; base.audio_path = ''; }
     base.updated_at = nowISO();
     base.synced = false;
     base.pending_op = editNote ? 'update' : 'create';
@@ -588,7 +671,41 @@
         });
       }
       if (e.target.closest('#profile-chip')) openSwitcher();
+      var react = e.target.closest('.react');
+      if (react) { toggleReaction(react.closest('[data-rnote]').dataset.rnote, react.dataset.emoji, react.closest('.day')); return; }
+      var rsend = e.target.closest('.reply-send');
+      if (rsend) {
+        var inp = rsend.closest('.reply-add').querySelector('.reply-in'); var b = (inp.value || '').trim();
+        if (!b) { inp.focus(); return; }
+        submitReply(rsend.closest('[data-rpnote]').dataset.rpnote, b, rsend.closest('.day'));
+      }
     });
+  }
+
+  function toggleReaction(noteId, emoji, dayEl) {
+    if (!state.sb) return;
+    var mine = clientId(), list = state.reactions[noteId] || (state.reactions[noteId] = []), idx = -1;
+    list.forEach(function (r, i) { if (r.emoji === emoji && r.client_id === mine) idx = i; });
+    if (idx >= 0) {
+      list.splice(idx, 1); renderDay(dayEl);
+      state.sb.from('reactions').delete().eq('note_id', noteId).eq('emoji', emoji).eq('client_id', mine).then(fetchReactions).catch(function () {});
+    } else {
+      list.push({ emoji: emoji, client_id: mine }); renderDay(dayEl);
+      state.sb.from('reactions').insert({ note_id: noteId, emoji: emoji, client_id: mine }).then(fetchReactions).catch(function () {});
+    }
+  }
+  function replyAuthor() {
+    if (MODE === 'poster') { var ap = activePerson(); if (ap && ap.name) return ap.name; }
+    var rn = localStorage.getItem('travel_reader_name');
+    if (!rn) { rn = (window.prompt(t('reader_name_prompt')) || '').trim(); if (rn) localStorage.setItem('travel_reader_name', rn); }
+    return rn || 'Guest';
+  }
+  function submitReply(noteId, body, dayEl) {
+    if (!state.sb) return;
+    var author = replyAuthor();
+    (state.replies[noteId] || (state.replies[noteId] = [])).push({ author: author, body: body, created_at: nowISO() });
+    renderDay(dayEl);
+    state.sb.from('note_replies').insert({ note_id: noteId, author: author, body: body, client_id: clientId() }).then(fetchReplies).catch(function () {});
   }
 
   function lightbox(url) {
@@ -721,9 +838,9 @@
       window.addEventListener('offline', updateSyncStatus);
       setInterval(function () { if (navigator.onLine) syncNow(); }, 20000);
     } else {
-      if (navigator.onLine) { fetchRemote(); fetchProfiles(); }
-      window.addEventListener('online', function () { fetchRemote(); fetchProfiles(); });
-      setInterval(function () { if (navigator.onLine) { fetchRemote(); fetchProfiles(); } }, 60000);
+      if (navigator.onLine) { fetchRemote(); fetchProfiles(); fetchSocial(); }
+      window.addEventListener('online', function () { fetchRemote(); fetchProfiles(); fetchSocial(); });
+      setInterval(function () { if (navigator.onLine) { fetchRemote(); fetchProfiles(); fetchSocial(); } }, 60000);
     }
   }
 

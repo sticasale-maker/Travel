@@ -34,6 +34,9 @@
   var AU_PATH = poly(OUTLINE);
   var TAS_PATH = poly(TASMANIA);
 
+  // expose projection + outline so route.js can draw the whole loop
+  window.AU_MAP = { px: px, py: py, W: W, H: H, AU_PATH: AU_PATH, TAS_PATH: TAS_PATH };
+
   // --- the day legs: [lat, lng, "Maps place name"] -------------------------
   var LEGS = {
     '2026-08-01': { from: [-33.75,151.29,'Dee Why NSW'],        to: [-31.50,145.84,'Cobar NSW'] },

@@ -32,6 +32,42 @@ alter table public.travel_notes
 alter table public.travel_notes
   add column if not exists avatar_path text default '';
 
+-- Voice memory clip path on each entry:
+alter table public.travel_notes
+  add column if not exists audio_path text default '';
+
+-- Reactions (❤️ 😂 🔥 👏) — anyone with the link can react (family or relatives).
+create table if not exists public.reactions (
+  id         uuid primary key default gen_random_uuid(),
+  note_id    uuid not null references public.travel_notes(id) on delete cascade,
+  emoji      text not null,
+  client_id  text not null,
+  created_at timestamptz not null default now(),
+  unique (note_id, emoji, client_id)
+);
+alter table public.reactions enable row level security;
+drop policy if exists "reactions read"   on public.reactions;
+create policy "reactions read"   on public.reactions for select using (true);
+drop policy if exists "reactions add"    on public.reactions;
+create policy "reactions add"    on public.reactions for insert with check (true);
+drop policy if exists "reactions remove" on public.reactions;
+create policy "reactions remove" on public.reactions for delete using (true);
+
+-- Replies — relatives (or anyone) leave a line under a memory.
+create table if not exists public.note_replies (
+  id         uuid primary key default gen_random_uuid(),
+  note_id    uuid not null references public.travel_notes(id) on delete cascade,
+  author     text not null,
+  body       text not null,
+  client_id  text,
+  created_at timestamptz not null default now()
+);
+alter table public.note_replies enable row level security;
+drop policy if exists "replies read" on public.note_replies;
+create policy "replies read" on public.note_replies for select using (true);
+drop policy if exists "replies add"  on public.note_replies;
+create policy "replies add"  on public.note_replies for insert with check (true);
+
 create index if not exists travel_notes_day_idx  on public.travel_notes (day_key, captured_at);
 create index if not exists travel_notes_user_idx on public.travel_notes (user_id);
 

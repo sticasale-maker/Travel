@@ -48,6 +48,17 @@
       remove_person: 'Remove from this phone',
       person_new: 'Add a person',
       person_edit: 'Edit person',
+      // stats / route / gallery
+      day_of: 'Day {n} of {total}', states_n: '{n} states', states_n_one: '{n} state',
+      total_km: '{km} km total', days_to_go: 'days to go', days_to_go_one: 'day to go',
+      loop_closed: 'Loop closed', welcome_home: 'welcome home',
+      route_btn: 'Route', photos_btn: 'Photos',
+      route_today: 'Today’s leg', route_full: 'The full loop',
+      gallery_empty: 'No photos yet — they’ll appear here once someone posts (open online once).',
+      // reactions / replies
+      reply_ph: 'Leave a reply…', reply_send: 'Send', reader_name_prompt: 'Your name (shown on replies):',
+      // voice
+      record: 'Record voice', stop: 'Stop', recording: 'Recording…', rerecord: 'Re-record', mic_denied: 'Mic blocked',
       // map
       map_directions: 'Tap for directions',
       map_pin: 'Tap · Google Maps',
@@ -96,6 +107,14 @@
       remove_person: 'Rimuovi da questo telefono',
       person_new: 'Aggiungi una persona',
       person_edit: 'Modifica persona',
+      day_of: 'Giorno {n} di {total}', states_n: '{n} stati', states_n_one: '{n} stato',
+      total_km: '{km} km totali', days_to_go: 'giorni alla partenza', days_to_go_one: 'giorno alla partenza',
+      loop_closed: 'Giro concluso', welcome_home: 'bentornati',
+      route_btn: 'Percorso', photos_btn: 'Foto',
+      route_today: 'Tappa di oggi', route_full: 'Il giro completo',
+      gallery_empty: 'Ancora nessuna foto — compariranno qui quando qualcuno pubblica (apri una volta online).',
+      reply_ph: 'Lascia una risposta…', reply_send: 'Invia', reader_name_prompt: 'Il tuo nome (mostrato sulle risposte):',
+      record: 'Registra voce', stop: 'Stop', recording: 'Registrazione…', rerecord: 'Registra di nuovo', mic_denied: 'Microfono bloccato',
       map_directions: 'Tocca per le indicazioni',
       map_pin: 'Tocca · Google Maps',
       reader_note_title: 'Come funziona questa pagina.',

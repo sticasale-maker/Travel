@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v15';
+const CACHE = 'outback-loop-v16';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos + avatars
 const ASSETS = [
   './index.html',
@@ -9,9 +9,14 @@ const ASSETS = [
   './itinerary.css',
   './outback-bg.svg',
   './i18n.js',
+  './tripdata.js',
   './itinerary.js',
   './map.js',
   './features.js',
+  './weather.js',
+  './stats.js',
+  './route.js',
+  './gallery.js',
   './notes.js',
   './config.js',
   './vendor/supabase.js',
