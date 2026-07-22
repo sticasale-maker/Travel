@@ -95,7 +95,17 @@
     var p = state.profiles[n.user_id];
     return (p && p.name) || 'Traveller';
   }
+  // Match an entry to a person known on this device (by key, else by name), so
+  // that person's *current* photo shows on all their entries — even older ones.
+  function localPersonFor(n) {
+    var people = loadPeople();
+    if (n.person_key) { var byKey = people.filter(function (p) { return p.id === n.person_key; })[0]; if (byKey) return byKey; }
+    if (n.author) { var an = String(n.author).toLowerCase(); var byName = people.filter(function (p) { return (p.name || '').toLowerCase() === an; })[0]; if (byName) return byName; }
+    return null;
+  }
   function noteAvatarURL(n) {
+    var lp = localPersonFor(n);
+    if (lp) { if (lp.avatarData) return lp.avatarData; if (lp.avatarPath) return publicUrl(lp.avatarPath); }
     if (n.avatar_path) return publicUrl(n.avatar_path);
     if (n._local && n.avatar_data) return n.avatar_data;
     var p = state.profiles[n.user_id];
@@ -243,7 +253,13 @@
       chain = chain.then(function () {
         var path = state.uid + '/avatar/' + p.id + '.jpg';
         return state.sb.storage.from(BUCKET).upload(path, dataURLtoBlob(p.avatarData), { contentType: 'image/jpeg', upsert: true })
-          .then(function (res) { if (!res.error) { p.avatarPath = path; dirty = true; } })
+          .then(function (res) {
+            if (res.error) return;
+            p.avatarPath = path; dirty = true;
+            // stamp this photo onto the person's existing entries so every viewer sees it
+            return state.sb.from('travel_notes').update({ avatar_path: path })
+              .eq('user_id', state.uid).eq('author', p.name).then(function () {}).catch(function () {});
+          })
           .catch(function () {});
       });
     });
