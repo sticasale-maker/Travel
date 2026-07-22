@@ -1,0 +1,15 @@
+{
+  "name": "Outback Loop — Dee Why to the Red Centre",
+  "short_name": "Outback Loop",
+  "description": "Day-by-day road trip itinerary with weather, drive times and attraction hours. Works offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F1E9D9",
+  "theme_color": "#B65C24",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
