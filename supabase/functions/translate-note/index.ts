@@ -1,7 +1,8 @@
 // Supabase Edge Function: translate-note
-// Fills the missing-language body of a travel_notes row using DeepL.
-// The poster app calls this (authenticated, anonymous session) right after a
-// note syncs; it runs with the service role so it can update the row.
+// Auto-detects the language a note was written in, stores the original in its
+// own column and the translation in the other (body_en / body_it), and sets
+// `lang` to the detected source. The poster app calls this (authenticated,
+// anonymous session) right after a note syncs; it runs with the service role.
 //
 // Deploy:
 //   supabase functions deploy translate-note
@@ -34,26 +35,31 @@ Deno.serve(async (req) => {
 
     const src = (note.body || note.body_en || note.body_it || "").trim();
     if (!src) return json({ ok: true, skipped: "empty" });
-
-    const patch: Record<string, string> = {};
-    if (note.lang === "en" && !(note.body_it || "").trim()) {
-      patch.body_it = await translate(src, "IT");
-    } else if (note.lang === "it" && !(note.body_en || "").trim()) {
-      patch.body_en = await translate(src, "EN-GB");
+    // Already have both languages? nothing to do (client clears both on edit).
+    if ((note.body_en || "").trim() && (note.body_it || "").trim()) {
+      return json({ ok: true, skipped: "already done" });
     }
 
-    if (Object.keys(patch).length) {
-      const { error: upErr } = await supabase
-        .from("travel_notes").update(patch).eq("id", id);
-      if (upErr) return json({ error: upErr.message }, 500);
+    // Translate to English and read DeepL's detected source language.
+    const en = await translate(src, "EN-GB");
+    let lang: string, body_en: string, body_it: string;
+    if (en.detected.toUpperCase().startsWith("IT")) {
+      lang = "it"; body_it = src; body_en = en.text;
+    } else {
+      lang = "en"; body_en = src;
+      body_it = (await translate(src, "IT")).text;
     }
-    return json({ ok: true, patch });
+
+    const { error: upErr } = await supabase
+      .from("travel_notes").update({ lang, body_en, body_it }).eq("id", id);
+    if (upErr) return json({ error: upErr.message }, 500);
+    return json({ ok: true, lang });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
 });
 
-async function translate(text: string, target: string): Promise<string> {
+async function translate(text: string, target: string): Promise<{ text: string; detected: string }> {
   const key = Deno.env.get("DEEPL_KEY");
   if (!key) throw new Error("DEEPL_KEY not set");
   const host = key.endsWith(":fx") ? "api-free.deepl.com" : "api.deepl.com";
@@ -67,7 +73,8 @@ async function translate(text: string, target: string): Promise<string> {
   });
   if (!res.ok) throw new Error("DeepL " + res.status);
   const data = await res.json();
-  return data.translations?.[0]?.text ?? text;
+  const tr = data.translations?.[0];
+  return { text: tr?.text ?? text, detected: tr?.detected_source_language ?? "" };
 }
 
 function json(body: unknown, status = 200): Response {

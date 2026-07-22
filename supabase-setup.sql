@@ -56,6 +56,31 @@ create policy "delete own" on public.travel_notes
   using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
+-- Profiles: one per person (per anonymous uid) — display name + avatar.
+-- Avatars are stored in the travel-photos bucket under {uid}/avatar/...
+-- ---------------------------------------------------------------------------
+create table if not exists public.profiles (
+  user_id     uuid primary key default auth.uid(),
+  name        text,
+  avatar_path text,
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+-- Anyone may read profiles (so readers see names + avatars):
+drop policy if exists "profiles read all" on public.profiles;
+create policy "profiles read all" on public.profiles for select using (true);
+
+-- A signed-in person may create / update only their own profile:
+drop policy if exists "profiles insert own" on public.profiles;
+create policy "profiles insert own" on public.profiles
+  for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists "profiles update own" on public.profiles;
+create policy "profiles update own" on public.profiles
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
 -- C.10  Storage: public photo bucket + policies
 -- ---------------------------------------------------------------------------
 -- Create the bucket (public read). If it already exists this is a no-op.

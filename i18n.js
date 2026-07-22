@@ -35,11 +35,13 @@
       save_memory: 'Save memory',
       cancel: 'Cancel',
       translated_from: 'Translated',
-      // name modal
-      name_title: 'Who’s writing?',
-      name_desc: 'Your name goes on each memory. You can change it later by clearing site data.',
+      // profile modal
+      name_title: 'Your profile',
+      name_desc: 'Your name and photo appear on each memory you add.',
       name_ph: '…or type a name',
       name_save: 'Save',
+      add_photo: 'Add photo',
+      change_photo: 'Change photo',
       // map
       map_directions: 'Tap for directions',
       map_pin: 'Tap · Google Maps',
@@ -76,10 +78,12 @@
       save_memory: 'Salva ricordo',
       cancel: 'Annulla',
       translated_from: 'Tradotto',
-      name_title: 'Chi scrive?',
-      name_desc: 'Il tuo nome comparirà su ogni ricordo. Puoi cambiarlo in seguito cancellando i dati del sito.',
+      name_title: 'Il tuo profilo',
+      name_desc: 'Il tuo nome e la foto compaiono su ogni ricordo che aggiungi.',
       name_ph: '…o scrivi un nome',
       name_save: 'Salva',
+      add_photo: 'Aggiungi foto',
+      change_photo: 'Cambia foto',
       map_directions: 'Tocca per le indicazioni',
       map_pin: 'Tocca · Google Maps',
       reader_note_title: 'Come funziona questa pagina.',
@@ -142,13 +146,36 @@
     if (titleKey) document.title = I18N.t(titleKey);
   }
 
-  // A compact EN | IT toggle rendered into #lang-toggle.
+  // Inline SVG flags so they render identically on every device (unlike emoji
+  // flags, which show as letters on Windows). English = Australian flag.
+  var FLAG_AU =
+    '<svg viewBox="0 0 60 30" class="flag" aria-hidden="true">' +
+      '<rect width="60" height="30" fill="#00247d"/>' +
+      '<path d="M0 0L30 15M30 0L0 15" stroke="#fff" stroke-width="3"/>' +
+      '<path d="M0 0L30 15M30 0L0 15" stroke="#cf142b" stroke-width="1.2"/>' +
+      '<path d="M15 0V15M0 7.5H30" stroke="#fff" stroke-width="5"/>' +
+      '<path d="M15 0V15M0 7.5H30" stroke="#cf142b" stroke-width="3"/>' +
+      '<circle cx="15" cy="22.5" r="3" fill="#fff"/>' +
+      '<circle cx="47" cy="6" r="1.3" fill="#fff"/>' +
+      '<circle cx="53.5" cy="13" r="1.3" fill="#fff"/>' +
+      '<circle cx="47" cy="24" r="1.3" fill="#fff"/>' +
+      '<circle cx="40" cy="15" r="1.3" fill="#fff"/>' +
+      '<circle cx="47" cy="15" r="0.8" fill="#fff"/>' +
+    '</svg>';
+  var FLAG_IT =
+    '<svg viewBox="0 0 60 40" class="flag" aria-hidden="true">' +
+      '<rect width="20" height="40" fill="#008c45"/>' +
+      '<rect x="20" width="20" height="40" fill="#f4f5f0"/>' +
+      '<rect x="40" width="20" height="40" fill="#cd212a"/>' +
+    '</svg>';
+
+  // A flag toggle rendered into #lang-toggle (Australian ⇄ Italian).
   function renderToggle() {
     var host = document.getElementById('lang-toggle');
     if (!host) return;
     host.innerHTML =
-      '<button type="button" data-lang="en" aria-label="English">EN</button>' +
-      '<button type="button" data-lang="it" aria-label="Italiano">IT</button>';
+      '<button type="button" data-lang="en" aria-label="English (Australia)">' + FLAG_AU + '</button>' +
+      '<button type="button" data-lang="it" aria-label="Italiano">' + FLAG_IT + '</button>';
     host.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-lang]');
       if (b) I18N.set(b.getAttribute('data-lang'));

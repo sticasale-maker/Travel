@@ -1,19 +1,17 @@
 /* notes.js — offline-first travel JOURNAL for the Outback Loop PWA.
    Poster (index.html): capture + sync + display.  Reader (read.html): display only.
 
-   Each entry stores the author's language plus per-language bodies (body_en /
-   body_it). The author's words go in their own language column; a Supabase
-   function fills the other on sync (auto-translate). Display picks the UI
-   language, falling back to the original when no translation exists yet.
+   Language: entries store body_en / body_it. The Edge Function auto-detects the
+   language written and fills both; display picks the UI language, falling back to
+   the original + a "Translated" tag. Each person has a profile (name + avatar),
+   shown beside every entry.
 
-   Storage: IndexedDB holds this device's authored entries + pending photo blobs,
-   so capture works with zero network and survives restarts. A sync engine pushes
-   the queue to Supabase (auth + Postgres row + Storage upload) when online. */
+   Storage: IndexedDB holds this device's entries + pending photo blobs, so capture
+   works offline and survives restarts. A sync engine pushes to Supabase when online. */
 (function () {
   'use strict';
 
-  // Ordering within a day: 'asc' = oldest-first (reads like a diary). Flip to 'desc'.
-  var ORDER = 'asc';
+  var ORDER = 'asc'; // oldest-first within a day (reads like a diary)
 
   var MODE = window.TRAVEL_MODE === 'reader' ? 'reader' : 'poster';
   var CFG = window.TRAVEL_CONFIG || {};
@@ -25,7 +23,7 @@
   var state = {
     sb: null, uid: null,
     author: localStorage.getItem('travel_author') || '',
-    remote: [], syncing: false, attempts: {}, booted: false
+    remote: [], profiles: {}, syncing: false, attempts: {}, booted: false
   };
 
   function t(k, v) { return I18N ? I18N.t(k, v) : k; }
@@ -35,8 +33,7 @@
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16);
     });
   }
   function nowISO() { return new Date().toISOString(); }
@@ -46,20 +43,53 @@
     });
   }
   function fmtTime(iso) {
-    try {
-      return new Date(iso).toLocaleString(I18N ? I18N.locale() : 'en-AU',
-        { weekday: 'short', hour: 'numeric', minute: '2-digit' });
-    } catch (e) { return ''; }
+    try { return new Date(iso).toLocaleString(I18N ? I18N.locale() : 'en-AU',
+      { weekday: 'short', hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; }
   }
   function cssEsc(s) { return String(s).replace(/"/g, '\\"'); }
 
-  // Choose the body text for the current UI language, else fall back to original.
   function pickBody(n) {
     var ui = lang();
     var col = ui === 'it' ? n.body_it : n.body_en;
     if (col && col.trim()) return { text: col, translated: !!(n.lang && n.lang !== ui) };
     var orig = n.body || n.body_en || n.body_it || '';
     return { text: orig, translated: false };
+  }
+
+  // ------- avatars -------
+  function initial(name) { name = (name || '').trim(); return (name ? name[0] : '?').toUpperCase(); }
+  function avatarColor(name) {
+    var h = 0; name = name || '?';
+    for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    return 'hsl(' + h + ',42%,42%)';
+  }
+  function displayName(n) {
+    var p = state.profiles[n.user_id];
+    if (p && p.name) return p.name;
+    if (n.author) return n.author;
+    if (myNote(n) && state.author) return state.author;
+    return 'Traveller';
+  }
+  function noteAvatarURL(n) {
+    if (myNote(n)) {
+      var d = localStorage.getItem('travel_avatar_data');
+      if (d) return d;
+    }
+    var p = state.profiles[n.user_id];
+    if (p && p.avatar_path) return publicUrl(p.avatar_path);
+    return '';
+  }
+  function avatarHTML(url, name, cls) {
+    if (url) return '<span class="avatar ' + (cls || '') + '"><img src="' + esc(url) + '" alt=""></span>';
+    return '<span class="avatar init ' + (cls || '') + '" style="background:' + avatarColor(name) + '">' +
+      esc(initial(name)) + '</span>';
+  }
+
+  function dataURLtoBlob(d) {
+    var parts = d.split(','), mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+    var bin = atob(parts[1]), arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime });
   }
 
   // ---------------------------------------------------------------- IndexedDB
@@ -71,15 +101,14 @@
       req.onupgradeneeded = function (e) {
         var db = e.target.result;
         if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'id' });
-        if (!db.objectStoreNames.contains('photos')) {
+        if (!db.objectStoreNames.contains('photos'))
           db.createObjectStore('photos', { keyPath: 'id' }).createIndex('note_id', 'note_id', { unique: false });
-        }
       };
       req.onsuccess = function () { DB = req.result; resolve(DB); };
       req.onerror = function () { reject(req.error); };
     });
   }
-  function tx(store, mode) { return openDB().then(function (db) { return db.transaction(store, mode).objectStore(store); }); }
+  function tx(s, m) { return openDB().then(function (db) { return db.transaction(s, m).objectStore(s); }); }
   function idbReq(r) { return new Promise(function (res, rej) { r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); }
   function putNote(n) { return tx('notes', 'readwrite').then(function (s) { return idbReq(s.put(n)); }); }
   function delNote(id) { return tx('notes', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
@@ -88,7 +117,7 @@
   function delPhoto(id) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
   function photosFor(id) { return tx('photos', 'readonly').then(function (s) { return idbReq(s.index('note_id').getAll(id)); }); }
 
-  // ---------------------------------------------------------------- photos
+  // ---------------------------------------------------------------- images
   function shrink(file) {
     var maxDim = CFG.PHOTO_MAX_DIM || 1600, quality = CFG.PHOTO_JPEG_QUALITY || 0.7;
     return new Promise(function (resolve) {
@@ -102,6 +131,22 @@
         c.toBlob(function (blob) { resolve(blob || file); }, 'image/jpeg', quality);
       };
       img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+  // Square centre-crop to 256px, as a data URL (small enough for localStorage).
+  function shrinkAvatar(file) {
+    return new Promise(function (resolve) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var s = Math.min(img.naturalWidth, img.naturalHeight);
+        var sx = (img.naturalWidth - s) / 2, sy = (img.naturalHeight - s) / 2, d = 256;
+        var c = document.createElement('canvas'); c.width = d; c.height = d;
+        c.getContext('2d').drawImage(img, sx, sy, s, s, 0, 0, d, d);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
       img.src = url;
     });
   }
@@ -124,7 +169,7 @@
     }).catch(function () { return null; });
   }
   function publicUrl(path) {
-    if (!state.sb) return '';
+    if (!state.sb || !path) return '';
     return state.sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
   }
   function fetchRemote() {
@@ -133,13 +178,42 @@
       .then(function (res) { if (!res.error && res.data) { state.remote = res.data; renderAll(); } })
       .catch(function () {});
   }
+  function fetchProfiles() {
+    if (!state.sb) return Promise.resolve();
+    return state.sb.from('profiles').select('*')
+      .then(function (res) {
+        if (!res.error && res.data) {
+          var m = {}; res.data.forEach(function (p) { m[p.user_id] = p; });
+          state.profiles = m; renderAll();
+        }
+      }).catch(function () {});
+  }
+
+  // ------- profile sync (upload avatar + upsert row) -------
+  function syncProfile() {
+    if (MODE !== 'poster' || !state.sb || !state.uid) return Promise.resolve();
+    if (localStorage.getItem('travel_avatar_synced') === '1') return Promise.resolve();
+    var name = state.author || 'Traveller';
+    var dataUrl = localStorage.getItem('travel_avatar_data');
+    var path = localStorage.getItem('travel_avatar_path') || '';
+    var chain = Promise.resolve();
+    if (dataUrl && !path) {
+      var blob = dataURLtoBlob(dataUrl);
+      path = state.uid + '/avatar/' + uuid() + '.jpg';
+      chain = state.sb.storage.from(BUCKET).upload(path, blob, { contentType: 'image/jpeg', upsert: true })
+        .then(function (res) { if (res.error) throw res.error; localStorage.setItem('travel_avatar_path', path); })
+        .catch(function () { path = ''; });
+    }
+    return chain.then(function () {
+      return state.sb.from('profiles').upsert({ user_id: state.uid, name: name, avatar_path: path, updated_at: nowISO() });
+    }).then(function (res) {
+      if (res && !res.error) localStorage.setItem('travel_avatar_synced', '1');
+    }).catch(function () {});
+  }
 
   // ---------------------------------------------------------------- sync
   function backoffReady(id) { var a = state.attempts[id]; return !a || Date.now() >= a.nextTry; }
-  function noteFailed(id) {
-    var a = state.attempts[id] || { count: 0 }; a.count += 1;
-    a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1)); state.attempts[id] = a;
-  }
+  function noteFailed(id) { var a = state.attempts[id] || { count: 0 }; a.count += 1; a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1)); state.attempts[id] = a; }
   function noteOK(id) { delete state.attempts[id]; }
 
   function syncNote(n) {
@@ -161,18 +235,14 @@
         chain = chain.then(function () {
           var path = state.uid + '/' + n.id + '/' + p.filename;
           return state.sb.storage.from(BUCKET).upload(path, p.blob, { contentType: 'image/jpeg', upsert: true })
-            .then(function (res) {
-              if (res.error) throw res.error;
-              if (paths.indexOf(path) === -1) paths.push(path);
-              p.uploaded = true; p.path = path; return putPhoto(p);
-            });
+            .then(function (res) { if (res.error) throw res.error; if (paths.indexOf(path) === -1) paths.push(path); p.uploaded = true; p.path = path; return putPhoto(p); });
         });
       });
       return chain.then(function () {
         n.photo_paths = paths;
         var row = {
           id: n.id, day_key: n.day_key, author: n.author || state.author || 'Traveller',
-          user_id: state.uid, lang: n.lang || 'en',
+          user_id: state.uid, lang: n.lang || lang(),
           body: n.body || '', body_en: n.body_en || '', body_it: n.body_it || '',
           photo_paths: paths, captured_at: n.captured_at, updated_at: nowISO()
         };
@@ -180,13 +250,7 @@
           if (res.error) throw res.error;
           n.synced = true; n.pending_op = null; n.user_id = state.uid;
           return putNote(n).then(function () {
-            // Ask the Edge Function to fill the other language. Fire-and-forget:
-            // if it isn't deployed yet this just no-ops, and the translated text
-            // shows up on the next fetchRemote once it lands.
-            if (row.body) {
-              return state.sb.functions.invoke('translate-note', { body: { id: n.id } })
-                .catch(function () {});
-            }
+            if (row.body) return state.sb.functions.invoke('translate-note', { body: { id: n.id } }).catch(function () {});
           });
         });
       });
@@ -198,19 +262,19 @@
     state.syncing = true;
     return ensureAuth().then(function () {
       if (!state.uid) return;
-      return allNotes().then(function (notes) {
-        var pending = notes.filter(function (n) { return !n.synced && n.pending_op; })
-          .filter(function (n) { return backoffReady(n.id); })
-          .sort(function (a, b) { return (a.captured_at || '').localeCompare(b.captured_at || ''); });
-        var chain = Promise.resolve();
-        pending.forEach(function (n) {
-          chain = chain.then(function () {
-            return syncNote(n).then(function () { noteOK(n.id); }).catch(function () { noteFailed(n.id); });
+      return syncProfile().then(function () {
+        return allNotes().then(function (notes) {
+          var pending = notes.filter(function (n) { return !n.synced && n.pending_op; })
+            .filter(function (n) { return backoffReady(n.id); })
+            .sort(function (a, b) { return (a.captured_at || '').localeCompare(b.captured_at || ''); });
+          var chain = Promise.resolve();
+          pending.forEach(function (n) {
+            chain = chain.then(function () { return syncNote(n).then(function () { noteOK(n.id); }).catch(function () { noteFailed(n.id); }); });
           });
+          return chain;
         });
-        return chain;
       });
-    }).then(function () { return fetchRemote(); })
+    }).then(function () { return Promise.all([fetchRemote(), fetchProfiles()]); })
       .catch(function () {}).then(function () { state.syncing = false; renderAll(); });
   }
 
@@ -218,36 +282,32 @@
   function myNote(n) { return n._local || (state.uid && n.user_id === state.uid); }
 
   function mergedForDay(dayKey, localNotes) {
-    var map = {};
-    state.remote.forEach(function (n) { if (n.day_key === dayKey) map[n.id] = n; });
+    var deleted = {}, map = {};
     localNotes.forEach(function (n) {
       if (n.day_key !== dayKey) return;
-      if (n.pending_op === 'delete') { delete map[n.id]; return; }
+      if (n.pending_op === 'delete') { deleted[n.id] = 1; return; }
       var m = Object.assign({}, n); m._local = true; m._pending = !n.synced; map[n.id] = m;
     });
-    var list = Object.keys(map).map(function (k) { return map[k]; });
-    list.sort(function (a, b) {
-      var c = (a.captured_at || '').localeCompare(b.captured_at || '');
-      return ORDER === 'asc' ? c : -c;
+    // Remote is authoritative for already-synced entries (it carries the
+    // translations the Edge Function added); pending local edits still win.
+    state.remote.forEach(function (n) {
+      if (n.day_key !== dayKey || deleted[n.id]) return;
+      var ex = map[n.id];
+      if (ex && ex._pending) return;
+      map[n.id] = n;
     });
+    var list = Object.keys(map).map(function (k) { return map[k]; });
+    list.sort(function (a, b) { var c = (a.captured_at || '').localeCompare(b.captured_at || ''); return ORDER === 'asc' ? c : -c; });
     return list;
   }
 
   function photoHTML(n) {
     var out = '';
-    (n.photo_paths || []).forEach(function (p) {
-      var url = publicUrl(p);
-      if (url) out += '<img loading="lazy" src="' + esc(url) + '" data-full="' + esc(url) + '" alt="">';
-    });
+    (n.photo_paths || []).forEach(function (p) { var url = publicUrl(p); if (url) out += '<img loading="lazy" src="' + esc(url) + '" data-full="' + esc(url) + '" alt="">'; });
     return out;
   }
   function localPhotoHTML(photos) {
-    var out = '';
-    (photos || []).forEach(function (p) {
-      var url = URL.createObjectURL(p.blob);
-      out += '<img src="' + url + '" data-full="' + url + '" alt="">';
-    });
-    return out;
+    var out = ''; (photos || []).forEach(function (p) { var url = URL.createObjectURL(p.blob); out += '<img src="' + url + '" data-full="' + url + '" alt="">'; }); return out;
   }
 
   function renderDay(dayEl) {
@@ -257,13 +317,11 @@
     allNotes().then(function (locals) {
       var list = mergedForDay(dayKey, locals);
       if (!list.length) {
-        listEl.innerHTML = '<div class="note-empty">' +
-          t(MODE === 'poster' ? 'empty_poster' : 'empty_reader') + '</div>';
+        listEl.innerHTML = '<div class="note-empty">' + t(MODE === 'poster' ? 'empty_poster' : 'empty_reader') + '</div>';
         return;
       }
       var html = list.map(function (n) {
-        var mine = myNote(n);
-        var body = pickBody(n);
+        var mine = myNote(n), body = pickBody(n), name = displayName(n), av = noteAvatarURL(n);
         var badges = '';
         if (n._pending) badges += '<span class="note-badge pending">' + esc(t('badge_pending')) + '</span>';
         else if (MODE === 'poster' && mine) badges += '<span class="note-badge mine">' + esc(t('badge_you')) + '</span>';
@@ -275,15 +333,15 @@
             '<button class="del" data-del="' + esc(n.id) + '">' + esc(t('del')) + '</button></div>';
         }
         return '<div class="note-card" data-note="' + esc(n.id) + '">' +
-          '<div class="note-meta"><span class="note-author">' + esc(n.author || 'Traveller') + '</span>' +
-          '<span class="note-time">' + esc(fmtTime(n.captured_at)) + '</span>' + badges + '</div>' +
+          '<div class="note-meta">' + avatarHTML(av, name) +
+          '<div class="note-meta-main"><span class="note-author">' + esc(name) + '</span>' +
+          '<span class="note-time">' + esc(fmtTime(n.captured_at)) + '</span>' + badges + '</div></div>' +
           (body.text ? '<div class="note-body">' + esc(body.text) + '</div>' : '') +
           (photoHTML(n) ? '<div class="note-photos">' + photoHTML(n) + '</div>' : '') +
           actions + '</div>';
       }).join('');
       listEl.innerHTML = html;
 
-      // own offline entries with no public URL yet: show local blobs
       list.forEach(function (n) {
         if (!n._local) return;
         var card = listEl.querySelector('[data-note="' + cssEsc(n.id) + '"]');
@@ -299,24 +357,20 @@
     });
   }
 
-  function renderAll() { document.querySelectorAll('.day').forEach(renderDay); updateSyncStatus(); }
+  function renderAll() { document.querySelectorAll('.day').forEach(renderDay); updateSyncStatus(); renderProfileChip(); }
 
   // ---------------------------------------------------------------- capture UI
   function buildDayUI(dayEl) {
-    if (dayEl.querySelector('.notes')) return; // already mounted for this render
+    if (dayEl.querySelector('.notes')) return;
     var dayKey = dayEl.dataset.date;
     var wrap = document.createElement('div');
     wrap.className = 'notes';
     wrap.innerHTML = MODE === 'poster'
       ? '<div class="notes-head"><h4>' + esc(t('journal_title')) + '</h4>' +
-        '<button class="add-note-btn" type="button">' + esc(t('add_memory')) + '</button></div>' +
-        '<div class="note-list"></div>'
-      : '<div class="notes-head"><h4>' + esc(t('journal_title')) + '</h4></div>' +
-        '<div class="note-list"></div>';
+        '<button class="add-note-btn" type="button">' + esc(t('add_memory')) + '</button></div><div class="note-list"></div>'
+      : '<div class="notes-head"><h4>' + esc(t('journal_title')) + '</h4></div><div class="note-list"></div>';
     dayEl.appendChild(wrap);
-    if (MODE === 'poster') {
-      wrap.querySelector('.add-note-btn').addEventListener('click', function () { openForm(dayEl, dayKey, null); });
-    }
+    if (MODE === 'poster') wrap.querySelector('.add-note-btn').addEventListener('click', function () { openForm(dayEl, dayKey, null); });
   }
 
   function openForm(dayEl, dayKey, editNote) {
@@ -325,8 +379,7 @@
     var pending = [];
     var form = document.createElement('div');
     form.className = 'note-form';
-    var editText = '';
-    if (editNote) { var b = pickBody(editNote); editText = editNote.body || b.text || ''; }
+    var editText = editNote ? (editNote.body || pickBody(editNote).text || '') : '';
     form.innerHTML =
       '<textarea placeholder="' + esc(t('form_placeholder')) + '">' + esc(editText) + '</textarea>' +
       '<div class="hint">' + esc(t('form_hint')) + '</div>' +
@@ -335,57 +388,37 @@
       '<div class="form-actions"><button class="save" type="button">' + esc(t('save_memory')) + '</button>' +
       '<button class="cancel" type="button">' + esc(t('cancel')) + '</button></div>';
     notes.insertBefore(form, notes.querySelector('.note-list'));
-
-    var ta = form.querySelector('textarea');
-    var fileInput = form.querySelector('input[type=file]');
-    var thumbs = form.querySelector('.thumbs');
-
+    var ta = form.querySelector('textarea'), fileInput = form.querySelector('input[type=file]'), thumbs = form.querySelector('.thumbs');
     fileInput.addEventListener('change', function () {
       var files = Array.prototype.slice.call(fileInput.files || []); fileInput.value = '';
-      files.forEach(function (f) {
-        shrink(f).then(function (blob) {
-          var filename = uuid() + '.jpg', url = URL.createObjectURL(blob);
-          pending.push({ blob: blob, filename: filename, url: url });
-          var img = document.createElement('img'); img.src = url; thumbs.appendChild(img);
-        });
-      });
+      files.forEach(function (f) { shrink(f).then(function (blob) { var filename = uuid() + '.jpg', url = URL.createObjectURL(blob); pending.push({ blob: blob, filename: filename, url: url }); var img = document.createElement('img'); img.src = url; thumbs.appendChild(img); }); });
     });
     form.querySelector('.cancel').addEventListener('click', function () { form.remove(); });
     form.querySelector('.save').addEventListener('click', function () {
       var body = ta.value.trim();
       if (!body && !pending.length && !(editNote && (editNote.photo_paths || []).length)) { ta.focus(); return; }
-      saveNote(dayKey, editNote, body, pending).then(function () {
-        form.remove(); renderDay(dayEl); scheduleSync();
-      });
+      saveNote(dayKey, editNote, body, pending).then(function () { form.remove(); renderDay(dayEl); scheduleSync(); });
     });
     ta.focus();
   }
 
   function saveNote(dayKey, editNote, body, pendingPhotos) {
     var id = editNote ? editNote.id : uuid();
-    var L = lang();
     var base = editNote || {
       id: id, day_key: dayKey, author: state.author || 'Traveller', user_id: state.uid || null,
       photo_paths: [], captured_at: nowISO(), created_at: nowISO()
     };
-    // Author's words go in their own language column; reset the other so the
-    // server re-translates. `body` keeps the original for fallback display.
-    base.lang = L;
+    base.author = state.author || base.author || 'Traveller';
     base.body = body;
-    base.body_en = L === 'en' ? body : '';
-    base.body_it = L === 'it' ? body : '';
+    // Clear both language columns; the server auto-detects and fills them.
+    base.body_en = ''; base.body_it = ''; base.lang = lang();
     base.updated_at = nowISO();
     base.synced = false;
     base.pending_op = editNote ? 'update' : 'create';
     base._local = true;
-
     return putNote(base).then(function () {
       var chain = Promise.resolve();
-      pendingPhotos.forEach(function (p) {
-        chain = chain.then(function () {
-          return putPhoto({ id: uuid(), note_id: id, blob: p.blob, filename: p.filename, uploaded: false });
-        });
-      });
+      pendingPhotos.forEach(function (p) { chain = chain.then(function () { return putPhoto({ id: uuid(), note_id: id, blob: p.blob, filename: p.filename, uploaded: false }); }); });
       return chain;
     });
   }
@@ -393,13 +426,8 @@
   function deleteNote(id) {
     return allNotes().then(function (notes) {
       var n = notes.filter(function (x) { return x.id === id; })[0];
-      if (!n) {
-        var remote = state.remote.filter(function (x) { return x.id === id; })[0];
-        if (!remote) return;
-        n = Object.assign({}, remote);
-      }
-      n.pending_op = 'delete'; n.synced = false; n._local = true;
-      return putNote(n);
+      if (!n) { var remote = state.remote.filter(function (x) { return x.id === id; })[0]; if (!remote) return; n = Object.assign({}, remote); }
+      n.pending_op = 'delete'; n.synced = false; n._local = true; return putNote(n);
     });
   }
 
@@ -408,12 +436,7 @@
       var full = e.target.closest('.note-photos img, .note-form .thumbs img');
       if (full && full.dataset.full) { lightbox(full.dataset.full); return; }
       var del = e.target.closest('[data-del]');
-      if (del) {
-        if (!confirm(t('confirm_delete'))) return;
-        var dayEl = del.closest('.day');
-        deleteNote(del.dataset.del).then(function () { renderDay(dayEl); scheduleSync(); });
-        return;
-      }
+      if (del) { if (!confirm(t('confirm_delete'))) return; var dayEl = del.closest('.day'); deleteNote(del.dataset.del).then(function () { renderDay(dayEl); scheduleSync(); }); return; }
       var edit = e.target.closest('[data-edit]');
       if (edit) {
         var dEl = edit.closest('.day');
@@ -423,42 +446,78 @@
           if (n) openForm(dEl, n.day_key, n);
         });
       }
+      var chip = e.target.closest('#profile-chip');
+      if (chip) openProfile(false);
     });
   }
 
   function lightbox(url) {
-    var lb = document.createElement('div');
-    lb.className = 'lightbox';
+    var lb = document.createElement('div'); lb.className = 'lightbox';
     lb.innerHTML = '<img src="' + esc(url) + '" alt="">';
     lb.addEventListener('click', function () { lb.remove(); });
     document.body.appendChild(lb);
   }
 
-  // ---------------------------------------------------------------- name prompt
-  function promptName() {
-    if (MODE !== 'poster' || state.author) return;
+  // ---------------------------------------------------------------- profile editor
+  function openProfile(force) {
+    if (MODE !== 'poster') return;
+    var avatarData = localStorage.getItem('travel_avatar_data') || '';
+    var name = state.author || '';
     var modal = document.createElement('div');
     modal.className = 'name-modal';
     modal.innerHTML =
       '<div class="box"><h3>' + esc(t('name_title')) + '</h3>' +
       '<p>' + esc(t('name_desc')) + '</p>' +
+      '<div class="avatar-pick">' +
+        '<span class="avatar-slot">' + avatarHTML(avatarData, name || '?') + '</span>' +
+        '<label>' + esc(t(avatarData ? 'change_photo' : 'add_photo')) +
+          '<input type="file" accept="image/*"></label>' +
+      '</div>' +
       '<div class="names">' +
-      '<button data-name="Marco">Marco</button>' +
-      '<button data-name="Giulia">Giulia</button>' +
-      '<button data-name="Vittoria">Vittoria</button>' +
-      '<button data-name="Luca">Luca</button></div>' +
-      '<input type="text" placeholder="' + esc(t('name_ph')) + '" maxlength="40">' +
+      '<button data-name="Marco">Marco</button><button data-name="Giulia">Giulia</button>' +
+      '<button data-name="Vittoria">Vittoria</button><button data-name="Luca">Luca</button></div>' +
+      '<input type="text" class="name-in" placeholder="' + esc(t('name_ph')) + '" maxlength="40" value="' + esc(name) + '">' +
       '<button class="save" type="button">' + esc(t('name_save')) + '</button></div>';
     document.body.appendChild(modal);
-    var input = modal.querySelector('input');
-    function setName(name) {
-      name = (name || '').trim(); if (!name) { input.focus(); return; }
-      state.author = name; localStorage.setItem('travel_author', name); modal.remove();
-    }
-    modal.querySelectorAll('.names button').forEach(function (b) {
-      b.addEventListener('click', function () { setName(b.dataset.name); });
+    var newAvatar = avatarData, changed = false;
+    var slot = modal.querySelector('.avatar-slot');
+    var nameIn = modal.querySelector('.name-in');
+    function refreshSlot() { slot.innerHTML = avatarHTML(newAvatar, (nameIn.value || '?')); }
+
+    modal.querySelector('.avatar-pick input').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      shrinkAvatar(f).then(function (d) { if (d) { newAvatar = d; changed = true; refreshSlot(); modal.querySelector('.avatar-pick label').childNodes[0].nodeValue = t('change_photo'); } });
     });
-    modal.querySelector('.save').addEventListener('click', function () { setName(input.value); });
+    modal.querySelectorAll('.names button').forEach(function (b) {
+      b.addEventListener('click', function () { nameIn.value = b.dataset.name; refreshSlot(); });
+    });
+    nameIn.addEventListener('input', refreshSlot);
+
+    modal.querySelector('.save').addEventListener('click', function () {
+      var nm = (nameIn.value || '').trim();
+      if (!nm) { nameIn.focus(); return; }
+      state.author = nm; localStorage.setItem('travel_author', nm);
+      if (changed) {
+        localStorage.setItem('travel_avatar_data', newAvatar);
+        localStorage.removeItem('travel_avatar_path');
+      }
+      if (changed || nm) localStorage.removeItem('travel_avatar_synced');
+      modal.remove();
+      renderProfileChip(); renderAll(); scheduleSync();
+    });
+
+    if (!force) {
+      modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
+    }
+  }
+
+  function renderProfileChip() {
+    var host = document.getElementById('profile-chip');
+    if (!host || MODE !== 'poster') return;
+    if (!state.author) { host.style.display = 'none'; return; }
+    host.style.display = 'inline-flex';
+    var av = localStorage.getItem('travel_avatar_data') || '';
+    host.innerHTML = avatarHTML(av, state.author) + '<span class="pname">' + esc(state.author) + '</span>';
   }
 
   // ---------------------------------------------------------------- sync status
@@ -467,8 +526,7 @@
     if (!el) return;
     allNotes().then(function (notes) {
       var pend = notes.filter(function (n) { return !n.synced && n.pending_op; }).length;
-      el.className = 'sync-status';
-      var label;
+      el.className = 'sync-status'; var label;
       if (!CONFIGURED) label = t('sync_local');
       else if (!navigator.onLine) { el.classList.add('offline'); label = t('sync_offline'); }
       else if (pend) { el.classList.add('pending'); label = t('sync_syncing', { n: pend }); }
@@ -479,11 +537,7 @@
 
   // ---------------------------------------------------------------- boot
   function scheduleSync() { updateSyncStatus(); syncNow(); }
-
-  function mount() {
-    document.querySelectorAll('.day').forEach(buildDayUI);
-    renderAll();
-  }
+  function mount() { document.querySelectorAll('.day').forEach(buildDayUI); renderAll(); }
 
   function initOnce() {
     if (state.booted) return;
@@ -491,19 +545,18 @@
     wireDelegation();
     initSupabase();
     if (MODE === 'poster') {
-      promptName();
-      ensureAuth().then(function () { renderAll(); syncNow(); });
+      if (!state.author) openProfile(true);
+      ensureAuth().then(function () { fetchProfiles(); renderAll(); syncNow(); });
       window.addEventListener('online', syncNow);
       window.addEventListener('offline', updateSyncStatus);
       setInterval(function () { if (navigator.onLine) syncNow(); }, 20000);
     } else {
-      if (navigator.onLine) fetchRemote();
-      window.addEventListener('online', fetchRemote);
-      setInterval(function () { if (navigator.onLine) fetchRemote(); }, 60000);
+      if (navigator.onLine) { fetchRemote(); fetchProfiles(); }
+      window.addEventListener('online', function () { fetchRemote(); fetchProfiles(); });
+      setInterval(function () { if (navigator.onLine) { fetchRemote(); fetchProfiles(); } }, 60000);
     }
   }
 
-  // Re-fired on every itinerary (re)render, including language switches.
   document.addEventListener('itinerary:ready', function () { mount(); initOnce(); });
   if (document.querySelector('.day')) { mount(); initOnce(); }
 })();
