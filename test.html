@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dee Why → Red Centre → Dee Why · Day by Day</title>
+<meta name="description" content="Dee Why to the Red Centre road trip, day by day — weather, drive times, attraction hours and shared travel notes. Works offline.">
+<meta name="theme-color" content="#B65C24">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Outback Loop">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="itinerary.css">
+</head>
+<body data-doc-title="doc_title_poster">
+<div class="wrap">
+
+  <div class="banner" id="banner">
+    <span id="banner-text" data-i18n="loading">Loading today…</span>
+    <span class="banner-right">
+      <span class="profile-chip" id="profile-chip" style="display:none"></span>
+      <span class="lang-toggle" id="lang-toggle"></span>
+      <span class="sync-status" id="sync-status"><span class="dot"></span></span>
+      <a id="jump" style="display:none"></a>
+    </span>
+  </div>
+
+  <div id="itinerary-mount"></div>
+
+</div>
+
+<script>window.TRAVEL_MODE = 'poster';</script>
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="i18n.js"></script>
+<script src="itinerary.js"></script>
+<script src="map.js"></script>
+<script src="features.js"></script>
+<script src="notes.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
