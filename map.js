@@ -125,8 +125,10 @@
       var leg = LEGS[dayEl.dataset.date];
       if (!leg) return;
       var el = buildMap(leg);
-      var drive = dayEl.querySelector('.drive');
-      if (drive) drive.insertAdjacentElement('afterend', el);
+      // Insert right after the day-number row so it floats top-right and the
+      // destination name + details wrap down its left side.
+      var top = dayEl.querySelector('.toprow');
+      if (top) top.insertAdjacentElement('afterend', el);
       else dayEl.insertBefore(el, dayEl.firstChild);
     });
   }

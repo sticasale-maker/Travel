@@ -126,11 +126,17 @@ footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line-strong
 /* ============================================================
    Per-day mini map of Australia (taps through to Google Maps)
    ============================================================ */
-.daymap{display:inline-flex; flex-direction:column; align-items:center; gap:6px;
-  text-decoration:none; margin:12px 0 2px; padding:9px 11px 8px; width:158px;
+.daymap{float:right; display:flex; flex-direction:column; align-items:center; gap:6px;
+  text-decoration:none; margin:2px 0 10px 16px; padding:9px 11px 8px; width:150px;
   background:var(--paper-2); border:1px solid var(--line); border-radius:11px;
   cursor:pointer; transition:border-color .18s, box-shadow .18s;}
 .daymap:hover{border-color:var(--ochre); box-shadow:0 4px 16px -10px rgba(138,67,25,.55);}
+/* Detail boxes shrink to sit left of the floated map instead of sliding under it;
+   headings, timed rows and notes clear below it for a clean full-width block. */
+.day .drive, .day .sleep, .day .wx{overflow:hidden;}
+.day h4, .day .timed, .day .notes{clear:right;}
+.day::after{content:""; display:block; clear:both;}
+@media (max-width:420px){ .daymap{width:128px; margin-left:12px;} }
 .day.camp .daymap{background:#FBEFCF; border-color:var(--camp-line);}
 .daymap svg{width:100%; height:auto; display:block;}
 .daymap .au{fill:#E7DBC3; stroke:#C9B692; stroke-width:2.2; stroke-linejoin:round;}
