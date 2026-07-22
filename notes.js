@@ -266,6 +266,27 @@
     return chain.then(function () { if (dirty) savePeople(people); });
   }
 
+  // Stamp each person's current photo onto their entries. Runs once per
+  // (person, photo) per session; retries next session if it fails (e.g. the
+  // avatar_path column doesn't exist yet), so photos backfill after the ALTER.
+  var _propagated = {};
+  function propagateAvatars() {
+    if (!state.sb || !state.uid) return Promise.resolve();
+    var people = loadPeople(), chain = Promise.resolve();
+    people.forEach(function (p) {
+      if (!p.avatarPath) return;
+      var key = p.id + ':' + p.avatarPath;
+      if (_propagated[key]) return;
+      chain = chain.then(function () {
+        return state.sb.from('travel_notes').update({ avatar_path: p.avatarPath })
+          .eq('user_id', state.uid).eq('author', p.name)
+          .then(function (res) { if (!res.error) _propagated[key] = 1; })
+          .catch(function () {});
+      });
+    });
+    return chain;
+  }
+
   // ---------------------------------------------------------------- sync
   function backoffReady(id) { var a = state.attempts[id]; return !a || Date.now() >= a.nextTry; }
   function noteFailed(id) { var a = state.attempts[id] || { count: 0 }; a.count += 1; a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1)); state.attempts[id] = a; }
@@ -333,7 +354,7 @@
     state.syncing = true;
     return ensureAuth().then(function () {
       if (!state.uid) return;
-      return uploadAvatars().then(function () {
+      return uploadAvatars().then(propagateAvatars).then(function () {
         return allNotes().then(function (notes) {
           var pending = notes.filter(function (n) { return !n.synced && n.pending_op; })
             .filter(function (n) { return backoffReady(n.id); })
@@ -438,7 +459,11 @@
         '<button class="add-note-btn" type="button">' + esc(t('add_memory')) + '</button></div><div class="note-list"></div>'
       : '<div class="notes-head"><h4>' + esc(t('journal_title')) + '</h4></div><div class="note-list"></div>';
     dayEl.appendChild(wrap);
-    if (MODE === 'poster') wrap.querySelector('.add-note-btn').addEventListener('click', function () { openForm(dayEl, dayKey, null); });
+    if (MODE === 'poster') wrap.querySelector('.add-note-btn').addEventListener('click', function () {
+      // set up who you are the first time you actually post (not on page load)
+      if (!loadPeople().length) openPerson(null, function () { openForm(dayEl, dayKey, null); });
+      else openForm(dayEl, dayKey, null);
+    });
   }
 
   function openForm(dayEl, dayKey, editNote) {
@@ -671,7 +696,8 @@
       if (rows && rows.length && !state.remote.length) { state.remote = rows; renderAll(); }
     });
     if (MODE === 'poster') {
-      if (!loadPeople().length) openPerson(null);
+      // don't block the view with a setup modal — the journal is readable
+      // straight away; we prompt for a profile only when someone taps "Add a memory".
       ensureAuth().then(function () { fetchProfiles(); renderAll(); syncNow(); });
       window.addEventListener('online', syncNow);
       window.addEventListener('offline', updateSyncStatus);
