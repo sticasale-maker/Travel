@@ -1,14 +1,16 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v7';
+const CACHE = 'outback-loop-v8';
 const ASSETS = [
   './index.html',
   './read.html',
   './itinerary.en.html',
   './itinerary.it.html',
   './itinerary.css',
+  './outback-bg.svg',
   './i18n.js',
   './itinerary.js',
   './map.js',
+  './features.js',
   './notes.js',
   './config.js',
   './vendor/supabase.js',

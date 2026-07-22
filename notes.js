@@ -175,8 +175,24 @@
   function fetchRemote() {
     if (!state.sb) return Promise.resolve();
     return state.sb.from('travel_notes').select('*').order('captured_at', { ascending: true })
-      .then(function (res) { if (!res.error && res.data) { state.remote = res.data; renderAll(); } })
+      .then(function (res) { if (!res.error && res.data) { state.remote = res.data; renderAll(); backfillTranslations(res.data); } })
       .catch(function () {});
+  }
+
+  // Self-healing: any synced entry missing a language gets (re)translated. Fires
+  // the Edge Function once per note per session; harmless no-op if it isn't
+  // deployed. Lets old entries fill in automatically once translation is live.
+  var _tried = {};
+  function backfillTranslations(rows) {
+    if (MODE !== 'poster' || !state.sb || !state.uid || !navigator.onLine) return;
+    rows.forEach(function (n) {
+      var body = (n.body || n.body_en || n.body_it || '').trim();
+      if (!body) return;
+      if ((n.body_en || '').trim() && (n.body_it || '').trim()) return; // both present
+      if (_tried[n.id]) return;
+      _tried[n.id] = 1;
+      state.sb.functions.invoke('translate-note', { body: { id: n.id } }).catch(function () {});
+    });
   }
   function fetchProfiles() {
     if (!state.sb) return Promise.resolve();

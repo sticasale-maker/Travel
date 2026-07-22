@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1024" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F1E9D9"/>
+      <stop offset="0.55" stop-color="#F4E6C9"/>
+      <stop offset="1" stop-color="#F3DFBC"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FBEECB"/>
+      <stop offset="0.45" stop-color="#F7E3B4"/>
+      <stop offset="1" stop-color="#F4E6C9" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- sky -->
+  <rect width="1440" height="1024" fill="url(#sky)"/>
+  <!-- low desert sun -->
+  <circle cx="1070" cy="300" r="300" fill="url(#sun)"/>
+  <circle cx="1070" cy="300" r="92" fill="#FBEFCF" opacity="0.7"/>
+
+  <!-- distant range -->
+  <path d="M0 566 L120 548 L240 560 L360 534 L520 556 L680 540 L840 560 L1010 536 L1200 556 L1360 544 L1440 556 L1440 1024 L0 1024 Z" fill="#E9D6AF"/>
+  <!-- far dune -->
+  <path d="M0 660 C 260 600, 520 690, 760 648 S 1200 604, 1440 656 L1440 1024 L0 1024 Z" fill="#E3CDA0"/>
+  <!-- mid dune -->
+  <path d="M0 772 C 300 706, 640 812, 940 754 S 1300 726, 1440 764 L1440 1024 L0 1024 Z" fill="#DABF8B"/>
+  <!-- near dune -->
+  <path d="M0 890 C 360 828, 700 916, 1020 872 S 1320 858, 1440 884 L1440 1024 L0 1024 Z" fill="#CFB079"/>
+
+  <!-- lone desert oak on the mid dune -->
+  <g fill="#9C7B3F" opacity="0.55">
+    <rect x="368" y="708" width="5" height="46" rx="2"/>
+    <path d="M370 646 C 352 664, 344 686, 350 712 C 358 700, 366 700, 370 706 C 374 700, 382 700, 390 712 C 396 686, 388 664, 370 646 Z"/>
+  </g>
+  <!-- spinifex tufts -->
+  <g stroke="#B79A5E" stroke-width="2.4" stroke-linecap="round" opacity="0.5" fill="none">
+    <path d="M150 812 l-6 -20 M150 812 l0 -24 M150 812 l6 -20"/>
+    <path d="M1180 838 l-6 -18 M1180 838 l0 -22 M1180 838 l6 -18"/>
+    <path d="M840 800 l-5 -16 M840 800 l0 -19 M840 800 l5 -16"/>
+  </g>
+</svg>
