@@ -521,7 +521,8 @@
       '<div class="names">' +
       '<button data-name="Marco">Marco</button>' +
       '<button data-name="Giulia">Giulia</button>' +
-      '<button data-name="Vittoria">Vittoria</button></div>' +
+      '<button data-name="Vittoria">Vittoria</button>' +
+      '<button data-name="Luca">Luca</button></div>' +
       '<input type="text" placeholder="…or type a name" maxlength="40">' +
       '<button class="save" type="button">Save</button></div>';
     document.body.appendChild(modal);
