@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v8';
+const CACHE = 'outback-loop-v9';
 const ASSETS = [
   './index.html',
   './read.html',

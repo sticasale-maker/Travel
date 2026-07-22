@@ -28,6 +28,10 @@ alter table public.travel_notes
   add column if not exists body_en text default '',
   add column if not exists body_it text default '';
 
+-- Author avatar carried on each entry, so one phone can post as different people:
+alter table public.travel_notes
+  add column if not exists avatar_path text default '';
+
 create index if not exists travel_notes_day_idx  on public.travel_notes (day_key, captured_at);
 create index if not exists travel_notes_user_idx on public.travel_notes (user_id);
 

@@ -1,10 +1,13 @@
 /* notes.js — offline-first travel JOURNAL for the Outback Loop PWA.
    Poster (index.html): capture + sync + display.  Reader (read.html): display only.
 
-   Language: entries store body_en / body_it. The Edge Function auto-detects the
-   language written and fills both; display picks the UI language, falling back to
-   the original + a "Translated" tag. Each person has a profile (name + avatar),
-   shown beside every entry.
+   People: the phone can hold several people (name + avatar), so one device can
+   post on behalf of family members who don't have their own phone. Each entry
+   carries its author's name + avatar, so the right person shows regardless of
+   which device/uid saved it. You pick who's writing per entry.
+
+   Language: entries store body_en / body_it (Edge Function auto-detects + fills
+   both); display picks the UI language, else the original + a "Translated" tag.
 
    Storage: IndexedDB holds this device's entries + pending photo blobs, so capture
    works offline and survives restarts. A sync engine pushes to Supabase when online. */
@@ -20,11 +23,7 @@
                    CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY.indexOf('YOUR-') === -1;
   var BUCKET = 'travel-photos';
 
-  var state = {
-    sb: null, uid: null,
-    author: localStorage.getItem('travel_author') || '',
-    remote: [], profiles: {}, syncing: false, attempts: {}, booted: false
-  };
+  var state = { sb: null, uid: null, remote: [], profiles: {}, syncing: false, attempts: {}, booted: false };
 
   function t(k, v) { return I18N ? I18N.t(k, v) : k; }
   function lang() { return I18N ? I18N.lang : 'en'; }
@@ -52,8 +51,36 @@
     var ui = lang();
     var col = ui === 'it' ? n.body_it : n.body_en;
     if (col && col.trim()) return { text: col, translated: !!(n.lang && n.lang !== ui) };
-    var orig = n.body || n.body_en || n.body_it || '';
-    return { text: orig, translated: false };
+    return { text: n.body || n.body_en || n.body_it || '', translated: false };
+  }
+
+  // ------- people (multiple per device) -------
+  function loadPeople() { try { return JSON.parse(localStorage.getItem('travel_people') || '[]'); } catch (e) { return []; } }
+  function savePeople(a) { localStorage.setItem('travel_people', JSON.stringify(a)); }
+  function personById(id) { return loadPeople().filter(function (p) { return p.id === id; })[0] || null; }
+  function activeId() { return localStorage.getItem('travel_active') || ''; }
+  function setActive(id) { localStorage.setItem('travel_active', id); }
+  function activePerson() { return personById(activeId()) || loadPeople()[0] || null; }
+  function upsertPerson(p) {
+    var a = loadPeople(), i = -1;
+    a.forEach(function (x, idx) { if (x.id === p.id) i = idx; });
+    if (i >= 0) a[i] = p; else a.push(p);
+    savePeople(a);
+  }
+  function removePerson(id) {
+    var a = loadPeople().filter(function (p) { return p.id !== id; });
+    savePeople(a);
+    if (activeId() === id) setActive(a[0] ? a[0].id : '');
+  }
+  // one-time migration from the old single-profile keys
+  function migratePeople() {
+    if (localStorage.getItem('travel_people')) return;
+    var people = [], oldName = localStorage.getItem('travel_author');
+    if (oldName) people.push({ id: uuid(), name: oldName,
+      avatarData: localStorage.getItem('travel_avatar_data') || '',
+      avatarPath: localStorage.getItem('travel_avatar_path') || '' });
+    savePeople(people);
+    if (people.length) setActive(people[0].id);
   }
 
   // ------- avatars -------
@@ -64,17 +91,13 @@
     return 'hsl(' + h + ',42%,42%)';
   }
   function displayName(n) {
-    var p = state.profiles[n.user_id];
-    if (p && p.name) return p.name;
     if (n.author) return n.author;
-    if (myNote(n) && state.author) return state.author;
-    return 'Traveller';
+    var p = state.profiles[n.user_id];
+    return (p && p.name) || 'Traveller';
   }
   function noteAvatarURL(n) {
-    if (myNote(n)) {
-      var d = localStorage.getItem('travel_avatar_data');
-      if (d) return d;
-    }
+    if (n.avatar_path) return publicUrl(n.avatar_path);
+    if (n._local && n.avatar_data) return n.avatar_data;
     var p = state.profiles[n.user_id];
     if (p && p.avatar_path) return publicUrl(p.avatar_path);
     return '';
@@ -84,7 +107,6 @@
     return '<span class="avatar init ' + (cls || '') + '" style="background:' + avatarColor(name) + '">' +
       esc(initial(name)) + '</span>';
   }
-
   function dataURLtoBlob(d) {
     var parts = d.split(','), mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
     var bin = atob(parts[1]), arr = new Uint8Array(bin.length);
@@ -134,8 +156,7 @@
       img.src = url;
     });
   }
-  // Square centre-crop to 256px, as a data URL (small enough for localStorage).
-  function shrinkAvatar(file) {
+  function shrinkAvatar(file) { // square centre-crop, 256px, data URL
     return new Promise(function (resolve) {
       var img = new Image(), url = URL.createObjectURL(file);
       img.onload = function () {
@@ -178,17 +199,13 @@
       .then(function (res) { if (!res.error && res.data) { state.remote = res.data; renderAll(); backfillTranslations(res.data); } })
       .catch(function () {});
   }
-
-  // Self-healing: any synced entry missing a language gets (re)translated. Fires
-  // the Edge Function once per note per session; harmless no-op if it isn't
-  // deployed. Lets old entries fill in automatically once translation is live.
   var _tried = {};
   function backfillTranslations(rows) {
     if (MODE !== 'poster' || !state.sb || !state.uid || !navigator.onLine) return;
     rows.forEach(function (n) {
       var body = (n.body || n.body_en || n.body_it || '').trim();
       if (!body) return;
-      if ((n.body_en || '').trim() && (n.body_it || '').trim()) return; // both present
+      if ((n.body_en || '').trim() && (n.body_it || '').trim()) return;
       if (_tried[n.id]) return;
       _tried[n.id] = 1;
       state.sb.functions.invoke('translate-note', { body: { id: n.id } }).catch(function () {});
@@ -198,39 +215,43 @@
     if (!state.sb) return Promise.resolve();
     return state.sb.from('profiles').select('*')
       .then(function (res) {
-        if (!res.error && res.data) {
-          var m = {}; res.data.forEach(function (p) { m[p.user_id] = p; });
-          state.profiles = m; renderAll();
-        }
+        if (!res.error && res.data) { var m = {}; res.data.forEach(function (p) { m[p.user_id] = p; }); state.profiles = m; renderAll(); }
       }).catch(function () {});
   }
 
-  // ------- profile sync (upload avatar + upsert row) -------
-  function syncProfile() {
-    if (MODE !== 'poster' || !state.sb || !state.uid) return Promise.resolve();
-    if (localStorage.getItem('travel_avatar_synced') === '1') return Promise.resolve();
-    var name = state.author || 'Traveller';
-    var dataUrl = localStorage.getItem('travel_avatar_data');
-    var path = localStorage.getItem('travel_avatar_path') || '';
-    var chain = Promise.resolve();
-    if (dataUrl && !path) {
-      var blob = dataURLtoBlob(dataUrl);
-      path = state.uid + '/avatar/' + uuid() + '.jpg';
-      chain = state.sb.storage.from(BUCKET).upload(path, blob, { contentType: 'image/jpeg', upsert: true })
-        .then(function (res) { if (res.error) throw res.error; localStorage.setItem('travel_avatar_path', path); })
-        .catch(function () { path = ''; });
-    }
-    return chain.then(function () {
-      return state.sb.from('profiles').upsert({ user_id: state.uid, name: name, avatar_path: path, updated_at: nowISO() });
-    }).then(function (res) {
-      if (res && !res.error) localStorage.setItem('travel_avatar_synced', '1');
-    }).catch(function () {});
+  // Upload each person's avatar that isn't uploaded yet; record its storage path.
+  function uploadAvatars() {
+    if (!state.sb || !state.uid) return Promise.resolve();
+    var people = loadPeople(), chain = Promise.resolve(), dirty = false;
+    people.forEach(function (p) {
+      if (!p.avatarData || p.avatarPath) return;
+      chain = chain.then(function () {
+        var path = state.uid + '/avatar/' + p.id + '.jpg';
+        return state.sb.storage.from(BUCKET).upload(path, dataURLtoBlob(p.avatarData), { contentType: 'image/jpeg', upsert: true })
+          .then(function (res) { if (!res.error) { p.avatarPath = path; dirty = true; } })
+          .catch(function () {});
+      });
+    });
+    return chain.then(function () { if (dirty) savePeople(people); });
   }
 
   // ---------------------------------------------------------------- sync
   function backoffReady(id) { var a = state.attempts[id]; return !a || Date.now() >= a.nextTry; }
   function noteFailed(id) { var a = state.attempts[id] || { count: 0 }; a.count += 1; a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1)); state.attempts[id] = a; }
   function noteOK(id) { delete state.attempts[id]; }
+
+  // upsert a row; if the DB doesn't have avatar_path yet, retry without it so
+  // posting never breaks before the one-line ALTER is run.
+  function upsertRow(row) {
+    return state.sb.from('travel_notes').upsert(row).then(function (res) {
+      if (res.error && row.avatar_path !== undefined &&
+          (/avatar_path/.test(res.error.message || '') || res.error.code === 'PGRST204')) {
+        var r2 = Object.assign({}, row); delete r2.avatar_path;
+        return state.sb.from('travel_notes').upsert(r2);
+      }
+      return res;
+    });
+  }
 
   function syncNote(n) {
     if (n.pending_op === 'delete') {
@@ -256,13 +277,16 @@
       });
       return chain.then(function () {
         n.photo_paths = paths;
+        // fill the author's avatar path (uploaded above) if we didn't have it yet
+        if (!n.avatar_path && n.person_key) { var pr = personById(n.person_key); if (pr && pr.avatarPath) n.avatar_path = pr.avatarPath; }
         var row = {
-          id: n.id, day_key: n.day_key, author: n.author || state.author || 'Traveller',
+          id: n.id, day_key: n.day_key, author: n.author || 'Traveller',
           user_id: state.uid, lang: n.lang || lang(),
           body: n.body || '', body_en: n.body_en || '', body_it: n.body_it || '',
-          photo_paths: paths, captured_at: n.captured_at, updated_at: nowISO()
+          photo_paths: paths, captured_at: n.captured_at, updated_at: nowISO(),
+          avatar_path: n.avatar_path || ''
         };
-        return state.sb.from('travel_notes').upsert(row).then(function (res) {
+        return upsertRow(row).then(function (res) {
           if (res.error) throw res.error;
           n.synced = true; n.pending_op = null; n.user_id = state.uid;
           return putNote(n).then(function () {
@@ -278,7 +302,7 @@
     state.syncing = true;
     return ensureAuth().then(function () {
       if (!state.uid) return;
-      return syncProfile().then(function () {
+      return uploadAvatars().then(function () {
         return allNotes().then(function (notes) {
           var pending = notes.filter(function (n) { return !n.synced && n.pending_op; })
             .filter(function (n) { return backoffReady(n.id); })
@@ -304,8 +328,6 @@
       if (n.pending_op === 'delete') { deleted[n.id] = 1; return; }
       var m = Object.assign({}, n); m._local = true; m._pending = !n.synced; map[n.id] = m;
     });
-    // Remote is authoritative for already-synced entries (it carries the
-    // translations the Edge Function added); pending local edits still win.
     state.remote.forEach(function (n) {
       if (n.day_key !== dayKey || deleted[n.id]) return;
       var ex = map[n.id];
@@ -340,7 +362,6 @@
         var mine = myNote(n), body = pickBody(n), name = displayName(n), av = noteAvatarURL(n);
         var badges = '';
         if (n._pending) badges += '<span class="note-badge pending">' + esc(t('badge_pending')) + '</span>';
-        else if (MODE === 'poster' && mine) badges += '<span class="note-badge mine">' + esc(t('badge_you')) + '</span>';
         if (body.translated) badges += '<span class="note-badge tr">' + esc(t('translated_from')) + '</span>';
         var actions = '';
         if (MODE === 'poster' && mine) {
@@ -393,10 +414,14 @@
     var notes = dayEl.querySelector('.notes');
     if (notes.querySelector('.note-form')) return;
     var pending = [];
+    var selectedId = editNote ? (editNote.person_key || '') : (activePerson() ? activePerson().id : '');
     var form = document.createElement('div');
     form.className = 'note-form';
     var editText = editNote ? (editNote.body || pickBody(editNote).text || '') : '';
-    form.innerHTML =
+    // "Writing as" picker (new entries only)
+    var picker = editNote ? '' :
+      '<div class="post-as"><span class="pa-label">' + esc(t('posting_as')) + '</span><div class="pa-people"></div></div>';
+    form.innerHTML = picker +
       '<textarea placeholder="' + esc(t('form_placeholder')) + '">' + esc(editText) + '</textarea>' +
       '<div class="hint">' + esc(t('form_hint')) + '</div>' +
       '<div class="file-row"><input type="file" accept="image/*" multiple></div>' +
@@ -404,6 +429,24 @@
       '<div class="form-actions"><button class="save" type="button">' + esc(t('save_memory')) + '</button>' +
       '<button class="cancel" type="button">' + esc(t('cancel')) + '</button></div>';
     notes.insertBefore(form, notes.querySelector('.note-list'));
+
+    function renderPicker() {
+      var host = form.querySelector('.pa-people'); if (!host) return;
+      var people = loadPeople();
+      host.innerHTML = people.map(function (p) {
+        return '<button type="button" class="pa-chip' + (p.id === selectedId ? ' on' : '') + '" data-pid="' + esc(p.id) + '">' +
+          avatarHTML(p.avatarData || (p.avatarPath ? publicUrl(p.avatarPath) : ''), p.name) +
+          '<span>' + esc(p.name) + '</span></button>';
+      }).join('') + '<button type="button" class="pa-chip pa-add" data-add="1">' + esc(t('add_person')) + '</button>';
+      host.querySelectorAll('.pa-chip[data-pid]').forEach(function (b) {
+        b.addEventListener('click', function () { selectedId = b.dataset.pid; renderPicker(); });
+      });
+      host.querySelector('[data-add]').addEventListener('click', function () {
+        openPerson(null, function (newId) { selectedId = newId; renderPicker(); });
+      });
+    }
+    if (!editNote) renderPicker();
+
     var ta = form.querySelector('textarea'), fileInput = form.querySelector('input[type=file]'), thumbs = form.querySelector('.thumbs');
     fileInput.addEventListener('change', function () {
       var files = Array.prototype.slice.call(fileInput.files || []); fileInput.value = '';
@@ -413,21 +456,29 @@
     form.querySelector('.save').addEventListener('click', function () {
       var body = ta.value.trim();
       if (!body && !pending.length && !(editNote && (editNote.photo_paths || []).length)) { ta.focus(); return; }
-      saveNote(dayKey, editNote, body, pending).then(function () { form.remove(); renderDay(dayEl); scheduleSync(); });
+      var person = editNote ? null : (personById(selectedId) || activePerson());
+      if (!editNote && person) setActive(person.id); // remember last writer
+      saveNote(dayKey, editNote, body, pending, person).then(function () { form.remove(); renderDay(dayEl); scheduleSync(); });
     });
     ta.focus();
   }
 
-  function saveNote(dayKey, editNote, body, pendingPhotos) {
+  function saveNote(dayKey, editNote, body, pendingPhotos, person) {
     var id = editNote ? editNote.id : uuid();
-    var base = editNote || {
-      id: id, day_key: dayKey, author: state.author || 'Traveller', user_id: state.uid || null,
-      photo_paths: [], captured_at: nowISO(), created_at: nowISO()
-    };
-    base.author = state.author || base.author || 'Traveller';
+    var base;
+    if (editNote) {
+      base = editNote; // keep original author / avatar
+    } else {
+      var pr = person || { name: 'Traveller', id: '', avatarData: '', avatarPath: '' };
+      base = {
+        id: id, day_key: dayKey, user_id: state.uid || null,
+        author: pr.name, person_key: pr.id || '',
+        avatar_data: pr.avatarData || '', avatar_path: pr.avatarPath || '',
+        photo_paths: [], captured_at: nowISO(), created_at: nowISO()
+      };
+    }
     base.body = body;
-    // Clear both language columns; the server auto-detects and fills them.
-    base.body_en = ''; base.body_it = ''; base.lang = lang();
+    base.body_en = ''; base.body_it = ''; base.lang = lang(); // server auto-detects
     base.updated_at = nowISO();
     base.synced = false;
     base.pending_op = editNote ? 'update' : 'create';
@@ -462,8 +513,7 @@
           if (n) openForm(dEl, n.day_key, n);
         });
       }
-      var chip = e.target.closest('#profile-chip');
-      if (chip) openProfile(false);
+      if (e.target.closest('#profile-chip')) openSwitcher();
     });
   }
 
@@ -474,66 +524,90 @@
     document.body.appendChild(lb);
   }
 
-  // ---------------------------------------------------------------- profile editor
-  function openProfile(force) {
+  // ---------------------------------------------------------------- people UI
+  // Switcher: choose who is active, add/edit people.
+  function openSwitcher() {
     if (MODE !== 'poster') return;
-    var avatarData = localStorage.getItem('travel_avatar_data') || '';
-    var name = state.author || '';
     var modal = document.createElement('div');
     modal.className = 'name-modal';
-    modal.innerHTML =
-      '<div class="box"><h3>' + esc(t('name_title')) + '</h3>' +
+    var people = loadPeople();
+    modal.innerHTML = '<div class="box"><h3>' + esc(t('whos_writing')) + '</h3>' +
+      '<div class="people-list">' + people.map(function (p) {
+        return '<div class="person-row' + (p.id === activeId() ? ' on' : '') + '" data-pick="' + esc(p.id) + '">' +
+          avatarHTML(p.avatarData || (p.avatarPath ? publicUrl(p.avatarPath) : ''), p.name) +
+          '<span class="prname">' + esc(p.name) + '</span>' +
+          '<button type="button" class="pr-edit" data-edit-person="' + esc(p.id) + '">' + esc(t('edit')) + '</button></div>';
+      }).join('') + '</div>' +
+      '<button class="add-person-btn" type="button">' + esc(t('add_person')) + '</button></div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
+    modal.querySelectorAll('.person-row').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('[data-edit-person]')) return;
+        setActive(row.dataset.pick); modal.remove(); renderProfileChip();
+      });
+    });
+    modal.querySelectorAll('[data-edit-person]').forEach(function (b) {
+      b.addEventListener('click', function () { modal.remove(); openPerson(b.dataset.editPerson); });
+    });
+    modal.querySelector('.add-person-btn').addEventListener('click', function () { modal.remove(); openPerson(null); });
+  }
+
+  // Person editor: add (id=null) or edit an existing person.
+  function openPerson(id, onSaved) {
+    if (MODE !== 'poster') return;
+    var existing = id ? personById(id) : null;
+    var pid = existing ? existing.id : uuid();
+    var name = existing ? existing.name : '';
+    var newAvatar = existing ? (existing.avatarData || '') : '';
+    var changed = false;
+    var modal = document.createElement('div');
+    modal.className = 'name-modal';
+    modal.innerHTML = '<div class="box"><h3>' + esc(t(existing ? 'person_edit' : 'person_new')) + '</h3>' +
       '<p>' + esc(t('name_desc')) + '</p>' +
-      '<div class="avatar-pick">' +
-        '<span class="avatar-slot">' + avatarHTML(avatarData, name || '?') + '</span>' +
-        '<label>' + esc(t(avatarData ? 'change_photo' : 'add_photo')) +
-          '<input type="file" accept="image/*"></label>' +
-      '</div>' +
-      '<div class="names">' +
-      '<button data-name="Marco">Marco</button><button data-name="Giulia">Giulia</button>' +
+      '<div class="avatar-pick"><span class="avatar-slot">' + avatarHTML(newAvatar, name || '?') + '</span>' +
+      '<label>' + esc(t(newAvatar ? 'change_photo' : 'add_photo')) + '<input type="file" accept="image/*"></label></div>' +
+      '<div class="names"><button data-name="Marco">Marco</button><button data-name="Giulia">Giulia</button>' +
       '<button data-name="Vittoria">Vittoria</button><button data-name="Luca">Luca</button></div>' +
       '<input type="text" class="name-in" placeholder="' + esc(t('name_ph')) + '" maxlength="40" value="' + esc(name) + '">' +
-      '<button class="save" type="button">' + esc(t('name_save')) + '</button></div>';
+      '<button class="save" type="button">' + esc(t('name_save')) + '</button>' +
+      (existing && loadPeople().length > 1 ? '<button class="remove-person" type="button">' + esc(t('remove_person')) + '</button>' : '') +
+      '</div>';
     document.body.appendChild(modal);
-    var newAvatar = avatarData, changed = false;
-    var slot = modal.querySelector('.avatar-slot');
-    var nameIn = modal.querySelector('.name-in');
+    var slot = modal.querySelector('.avatar-slot'), nameIn = modal.querySelector('.name-in');
     function refreshSlot() { slot.innerHTML = avatarHTML(newAvatar, (nameIn.value || '?')); }
-
     modal.querySelector('.avatar-pick input').addEventListener('change', function (e) {
       var f = e.target.files && e.target.files[0]; if (!f) return;
       shrinkAvatar(f).then(function (d) { if (d) { newAvatar = d; changed = true; refreshSlot(); modal.querySelector('.avatar-pick label').childNodes[0].nodeValue = t('change_photo'); } });
     });
-    modal.querySelectorAll('.names button').forEach(function (b) {
-      b.addEventListener('click', function () { nameIn.value = b.dataset.name; refreshSlot(); });
-    });
+    modal.querySelectorAll('.names button').forEach(function (b) { b.addEventListener('click', function () { nameIn.value = b.dataset.name; refreshSlot(); }); });
     nameIn.addEventListener('input', refreshSlot);
-
     modal.querySelector('.save').addEventListener('click', function () {
       var nm = (nameIn.value || '').trim();
       if (!nm) { nameIn.focus(); return; }
-      state.author = nm; localStorage.setItem('travel_author', nm);
-      if (changed) {
-        localStorage.setItem('travel_avatar_data', newAvatar);
-        localStorage.removeItem('travel_avatar_path');
-      }
-      if (changed || nm) localStorage.removeItem('travel_avatar_synced');
+      var person = { id: pid, name: nm,
+        avatarData: newAvatar,
+        avatarPath: (existing && !changed) ? (existing.avatarPath || '') : '' };
+      upsertPerson(person);
+      setActive(pid);
       modal.remove();
       renderProfileChip(); renderAll(); scheduleSync();
+      if (onSaved) onSaved(pid);
     });
-
-    if (!force) {
-      modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
-    }
+    var rm = modal.querySelector('.remove-person');
+    if (rm) rm.addEventListener('click', function () { removePerson(pid); modal.remove(); renderProfileChip(); renderAll(); });
+    var forced = !loadPeople().length;
+    if (!forced) modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
   }
 
   function renderProfileChip() {
     var host = document.getElementById('profile-chip');
     if (!host || MODE !== 'poster') return;
-    if (!state.author) { host.style.display = 'none'; return; }
+    var p = activePerson();
+    if (!p) { host.style.display = 'none'; return; }
     host.style.display = 'inline-flex';
-    var av = localStorage.getItem('travel_avatar_data') || '';
-    host.innerHTML = avatarHTML(av, state.author) + '<span class="pname">' + esc(state.author) + '</span>';
+    host.innerHTML = avatarHTML(p.avatarData || (p.avatarPath ? publicUrl(p.avatarPath) : ''), p.name) +
+      '<span class="pname">' + esc(p.name) + '</span>';
   }
 
   // ---------------------------------------------------------------- sync status
@@ -558,10 +632,11 @@
   function initOnce() {
     if (state.booted) return;
     state.booted = true;
+    migratePeople();
     wireDelegation();
     initSupabase();
     if (MODE === 'poster') {
-      if (!state.author) openProfile(true);
+      if (!loadPeople().length) openPerson(null);
       ensureAuth().then(function () { fetchProfiles(); renderAll(); syncNow(); });
       window.addEventListener('online', syncNow);
       window.addEventListener('offline', updateSyncStatus);

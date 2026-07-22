@@ -164,6 +164,37 @@ footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line-strong
   letter-spacing:.05em; text-transform:uppercase; color:var(--ochre-deep); cursor:pointer;
   text-decoration:underline; text-underline-offset:2px;}
 .name-modal .avatar-pick input{display:none;}
+.name-modal .remove-person{width:100%; margin-top:10px; background:none; border:none;
+  color:#B4562A; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.05em;
+  text-transform:uppercase; text-decoration:underline; cursor:pointer;}
+
+/* "who's writing" switcher */
+.people-list{display:flex; flex-direction:column; gap:8px; margin-bottom:12px;}
+.person-row{display:flex; align-items:center; gap:11px; padding:8px 10px; cursor:pointer;
+  border:1px solid var(--line-strong); border-radius:11px; background:var(--paper-2);}
+.person-row.on{border-color:var(--ochre); background:var(--focus-bg);}
+.person-row .prname{flex:1; font-weight:600; color:var(--ink);}
+.person-row .avatar{width:36px; height:36px;}
+.person-row .pr-edit{background:none; border:none; font-family:'Space Mono',monospace;
+  font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted);
+  text-decoration:underline; cursor:pointer;}
+.add-person-btn{width:100%; font-family:'Space Mono',monospace; font-size:12px; font-weight:700;
+  letter-spacing:.05em; text-transform:uppercase; color:var(--ochre-deep);
+  background:var(--paper-2); border:1px dashed var(--line-strong); border-radius:9px;
+  padding:10px; cursor:pointer;}
+
+/* "writing as" picker inside the entry form */
+.post-as{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:11px;}
+.post-as .pa-label{font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--faint);}
+.pa-people{display:flex; gap:6px; flex-wrap:wrap;}
+.pa-chip{display:inline-flex; align-items:center; gap:6px; padding:3px 10px 3px 3px;
+  border:1px solid var(--line-strong); border-radius:20px; background:var(--paper);
+  cursor:pointer; font-size:13px; color:var(--ink);}
+.pa-chip.on{border-color:var(--ochre); background:var(--focus-bg);}
+.pa-chip .avatar{width:22px; height:22px;}
+.pa-chip.pa-add{border-style:dashed; color:var(--muted); padding:5px 11px;
+  font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.04em; text-transform:uppercase;}
 
 /* ============================================================
    Per-day mini map of Australia (taps through to Google Maps)
