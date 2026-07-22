@@ -23,7 +23,7 @@
                    CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY.indexOf('YOUR-') === -1;
   var BUCKET = 'travel-photos';
 
-  var state = { sb: null, uid: null, remote: [], profiles: {}, syncing: false, attempts: {}, booted: false };
+  var state = { sb: null, uid: null, remote: [], profiles: {}, profilesByName: {}, syncing: false, attempts: {}, booted: false };
 
   function t(k, v) { return I18N ? I18N.t(k, v) : k; }
   function lang() { return I18N ? I18N.lang : 'en'; }
@@ -108,6 +108,9 @@
     if (lp) { if (lp.avatarData) return lp.avatarData; if (lp.avatarPath) return publicUrl(lp.avatarPath); }
     if (n.avatar_path) return publicUrl(n.avatar_path);
     if (n._local && n.avatar_data) return n.avatar_data;
+    // match by author name across all profiles — resilient to session/uid changes
+    var byName = n.author && state.profilesByName[n.author];
+    if (byName && byName.avatar_path) return publicUrl(byName.avatar_path);
     var p = state.profiles[n.user_id];
     if (p && p.avatar_path) return publicUrl(p.avatar_path);
     return '';
@@ -240,8 +243,23 @@
     if (!state.sb) return Promise.resolve();
     return state.sb.from('profiles').select('*')
       .then(function (res) {
-        if (!res.error && res.data) { var m = {}; res.data.forEach(function (p) { m[p.user_id] = p; }); state.profiles = m; renderAll(); }
+        if (!res.error && res.data) {
+          var m = {}, byName = {};
+          res.data.forEach(function (p) { m[p.user_id] = p; if (p.name && p.avatar_path) byName[p.name] = p; });
+          state.profiles = m; state.profilesByName = byName; renderAll();
+        }
       }).catch(function () {});
+  }
+
+  // Publish the active person's profile (uid -> name + avatar) so any viewer can
+  // resolve their photo by name, even for entries saved under a different uid.
+  function syncProfiles() {
+    if (!state.sb || !state.uid) return Promise.resolve();
+    var ap = activePerson();
+    if (!ap || !ap.avatarPath) return Promise.resolve();
+    return state.sb.from('profiles')
+      .upsert({ user_id: state.uid, name: ap.name, avatar_path: ap.avatarPath, updated_at: nowISO() })
+      .then(function () {}).catch(function () {});
   }
 
   // Upload each person's avatar that isn't uploaded yet; record its storage path.
@@ -354,7 +372,7 @@
     state.syncing = true;
     return ensureAuth().then(function () {
       if (!state.uid) return;
-      return uploadAvatars().then(propagateAvatars).then(function () {
+      return uploadAvatars().then(propagateAvatars).then(syncProfiles).then(function () {
         return allNotes().then(function (notes) {
           var pending = notes.filter(function (n) { return !n.synced && n.pending_op; })
             .filter(function (n) { return backoffReady(n.id); })
