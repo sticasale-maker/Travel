@@ -119,12 +119,14 @@
   function openDB() {
     return new Promise(function (resolve, reject) {
       if (DB) return resolve(DB);
-      var req = indexedDB.open('travel-notes-db', 1);
+      var req = indexedDB.open('travel-notes-db', 2);
       req.onupgradeneeded = function (e) {
         var db = e.target.result;
         if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('photos'))
           db.createObjectStore('photos', { keyPath: 'id' }).createIndex('note_id', 'note_id', { unique: false });
+        // cache of everyone's entries (fetched from the server) for offline reading
+        if (!db.objectStoreNames.contains('remote')) db.createObjectStore('remote', { keyPath: 'id' });
       };
       req.onsuccess = function () { DB = req.result; resolve(DB); };
       req.onerror = function () { reject(req.error); };
@@ -138,6 +140,19 @@
   function putPhoto(p) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.put(p)); }); }
   function delPhoto(id) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
   function photosFor(id) { return tx('photos', 'readonly').then(function (s) { return idbReq(s.index('note_id').getAll(id)); }); }
+  // remote-entry cache (so everyone's entries read offline)
+  function cacheRemote(rows) {
+    return openDB().then(function (db) {
+      return new Promise(function (res) {
+        var st = db.transaction('remote', 'readwrite').objectStore('remote');
+        st.clear();
+        rows.forEach(function (r) { st.put(r); });
+        st.transaction.oncomplete = function () { res(); };
+        st.transaction.onerror = function () { res(); };
+      });
+    }).catch(function () {});
+  }
+  function loadRemoteCache() { return tx('remote', 'readonly').then(function (s) { return idbReq(s.getAll()); }).catch(function () { return []; }); }
 
   // ---------------------------------------------------------------- images
   function shrink(file) {
@@ -196,7 +211,7 @@
   function fetchRemote() {
     if (!state.sb) return Promise.resolve();
     return state.sb.from('travel_notes').select('*').order('captured_at', { ascending: true })
-      .then(function (res) { if (!res.error && res.data) { state.remote = res.data; renderAll(); backfillTranslations(res.data); } })
+      .then(function (res) { if (!res.error && res.data) { state.remote = res.data; renderAll(); cacheRemote(res.data); backfillTranslations(res.data); } })
       .catch(function () {});
   }
   var _tried = {};
@@ -635,6 +650,10 @@
     migratePeople();
     wireDelegation();
     initSupabase();
+    // Show everyone's last-known entries immediately (works with no signal).
+    loadRemoteCache().then(function (rows) {
+      if (rows && rows.length && !state.remote.length) { state.remote = rows; renderAll(); }
+    });
     if (MODE === 'poster') {
       if (!loadPeople().length) openPerson(null);
       ensureAuth().then(function () { fetchProfiles(); renderAll(); syncNow(); });

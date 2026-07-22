@@ -1,5 +1,6 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v10';
+const CACHE = 'outback-loop-v11';
+const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos + avatars
 const ASSETS = [
   './index.html',
   './read.html',
@@ -31,7 +32,7 @@ self.addEventListener('install', function (e) {
 self.addEventListener('activate', function (e) {
   e.waitUntil(
     caches.keys().then(function (keys) {
-      return Promise.all(keys.filter(function (k) { return k !== CACHE; })
+      return Promise.all(keys.filter(function (k) { return k !== CACHE && k !== IMG_CACHE; })
         .map(function (k) { return caches.delete(k); }));
     }).then(function () { return self.clients.claim(); })
   );
@@ -42,8 +43,24 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
 
-  // Never touch Supabase — auth and note freshness must hit the network directly.
-  if (url.hostname.endsWith('.supabase.co')) return;
+  // Supabase: cache public storage images (photos/avatars) so they show offline
+  // once seen; never cache auth / REST data / functions (those must stay fresh).
+  if (url.hostname.endsWith('.supabase.co')) {
+    if (url.pathname.indexOf('/storage/v1/object/public/') === 0) {
+      e.respondWith(
+        caches.open(IMG_CACHE).then(function (c) {
+          return c.match(req).then(function (cached) {
+            var net = fetch(req).then(function (r) {
+              if (r && r.status === 200) c.put(req, r.clone());
+              return r;
+            }).catch(function () { return cached; });
+            return cached || net;
+          });
+        })
+      );
+    }
+    return;
+  }
 
   // Page loads: use network when available, fall back to the cached shell offline.
   if (req.mode === 'navigate') {
