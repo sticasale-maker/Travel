@@ -123,6 +123,15 @@ footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line-strong
   .day.focus{box-shadow:none;} a{color:var(--ink); text-decoration:none;}
   .notes, .note-form{display:none !important;} }
 
+/* language toggle in the banner */
+.banner-right{display:flex; align-items:center; gap:12px;}
+.lang-toggle{display:inline-flex; border:1px solid rgba(255,255,255,.28);
+  border-radius:20px; overflow:hidden; flex:none;}
+.lang-toggle button{font-family:'Space Mono',monospace; font-size:11px; font-weight:700;
+  letter-spacing:.06em; padding:3px 9px; border:none; background:transparent;
+  color:var(--paper); opacity:.55; cursor:pointer; line-height:1.4;}
+.lang-toggle button.on{background:var(--ochre); color:#fff; opacity:1;}
+
 /* ============================================================
    Per-day mini map of Australia (taps through to Google Maps)
    ============================================================ */
@@ -183,6 +192,7 @@ footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line-strong
   text-transform:uppercase; font-weight:700; padding:2px 7px; border-radius:12px;}
 .note-badge.pending{background:#F3E0BE; color:#8a5b12; border:1px solid var(--camp-line);}
 .note-badge.mine{background:var(--spinifex); color:#fff;}
+.note-badge.tr{background:#E3EAE0; color:#4C5D38; border:1px solid #C4D2B8;}
 .note-actions{display:flex; gap:12px; margin-top:8px;}
 .note-actions button{background:none; border:none; padding:0; cursor:pointer;
   font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.04em;

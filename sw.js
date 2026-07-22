@@ -1,10 +1,12 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v5';
+const CACHE = 'outback-loop-v6';
 const ASSETS = [
   './index.html',
   './read.html',
-  './itinerary.html',
+  './itinerary.en.html',
+  './itinerary.it.html',
   './itinerary.css',
+  './i18n.js',
   './itinerary.js',
   './map.js',
   './notes.js',

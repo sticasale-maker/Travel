@@ -13,23 +13,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="itinerary.css">
 </head>
-<body>
+<body data-doc-title="doc_title_reader">
 <div class="wrap">
 
   <div class="banner" id="banner">
-    <span id="banner-text">Loading…</span>
-    <span class="sync-status" id="reader-tag"><span class="dot"></span>Read-only</span>
+    <span id="banner-text" data-i18n="loading">Loading…</span>
+    <span class="banner-right">
+      <span class="lang-toggle" id="lang-toggle"></span>
+      <span class="sync-status" id="reader-tag"><span class="dot"></span><span data-i18n="reader_tag">Read-only</span></span>
+    </span>
   </div>
 
   <div id="itinerary-mount"></div>
 
   <div class="note" style="margin-top:26px">
-    <b>How this page works.</b> Anyone with this link can read every note and photo —
-    it's unlisted, with no login. Posting, editing and deleting are locked to the
-    travellers' own app and enforced by the database, so this page is genuinely
-    read-only: you can follow along, but nothing here can be changed from your end.
-    Ownership (each traveller edits only their own notes) is enforced server-side —
-    solid for a family log, not account-grade security, and there are no passwords to lose in the desert.
+    <b data-i18n="reader_note_title">How this page works.</b>
+    <span data-i18n="reader_note_body"></span>
   </div>
 
 </div>
@@ -37,6 +36,7 @@
 <script>window.TRAVEL_MODE = 'reader';</script>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
+<script src="i18n.js"></script>
 <script src="itinerary.js"></script>
 <script src="map.js"></script>
 <script src="notes.js"></script>

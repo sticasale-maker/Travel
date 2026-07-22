@@ -88,12 +88,13 @@
               '<circle class="p-to" cx="' + tx + '" cy="' + ty + '" r="8"/>';
     }
 
+    var t18 = (window.I18N && window.I18N.t) ? window.I18N.t.bind(window.I18N) : function (k) { return k; };
     var cap = stationary
       ? '<span class="daymap-cap">' + escapeText(shortName(t[2])) +
-        '<span class="hint">Tap · Google Maps</span></span>'
+        '<span class="hint">' + escapeText(t18('map_pin')) + '</span></span>'
       : '<span class="daymap-cap">' + escapeText(shortName(f[2])) +
         ' <span class="arr">→</span> ' + escapeText(shortName(t[2])) +
-        '<span class="hint">Tap for directions</span></span>';
+        '<span class="hint">' + escapeText(t18('map_directions')) + '</span></span>';
 
     var a = document.createElement('a');
     a.className = 'daymap';
@@ -133,6 +134,7 @@
     });
   }
 
+  // Runs on every (re)render of the itinerary — including language switches.
+  document.addEventListener('itinerary:ready', render);
   if (document.querySelector('.day')) render();
-  else document.addEventListener('itinerary:ready', render, { once: true });
 })();

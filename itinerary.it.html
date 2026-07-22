@@ -1,0 +1,422 @@
+<!-- Shared itinerary markup — injected into #itinerary-mount by itinerary.js.
+     Single source of truth for both index.html (poster) and read.html (reader). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-sunrise" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18M12 3v4M5.6 10.6 4 9M18.4 10.6 20 9M8 18a4 4 0 0 1 8 0"/></symbol>
+  <symbol id="i-sunset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18M12 9V3M5.6 10.6 4 9M18.4 10.6 20 9M8 18a4 4 0 0 1 8 0"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8v11M3 12h18a2 2 0 0 1 2 2v5M3 15h20M6 10h5a2 2 0 0 1 2 2"/></symbol>
+  <symbol id="i-tent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 20h18L12 4zM12 4v16"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13M5 13h14v4H5zM7 17v1.5M17 17v1.5"/><circle cx="7.5" cy="14.5" r="1"/><circle cx="16.5" cy="14.5" r="1"/></symbol>
+  <symbol id="i-road" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l3 16H6zM12 8v1M12 13v1M12 18v0"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+</defs></svg>
+
+<header>
+  <p class="eyebrow">Giro d'inverno · 1–13 agosto 2026</p>
+  <h1>Dee Why <span class="arrow">→</span> Red Centre <span class="arrow">→</span> Dee Why</h1>
+  <p class="sub">Tredici giorni, dodici destinazioni. Aprilo in viaggio — la tappa di oggi si illumina da sola, e ogni luogo rimanda alle mappe.</p>
+</header>
+
+<div class="note">
+  <b>Nota meteo.</b> Le previsioni in tempo reale arrivano solo a ~5 giorni, quindi queste sono medie storiche di agosto, non una previsione — controlla le condizioni reali qualche giorno prima di ogni tratta. I tempi di guida sono le stime del vostro piano; le distanze sono approssimative. Gran parte di questo percorso ha poco o nessun segnale telefonico, quindi salva questa pagina offline prima di partire. <b>Tocca il nome di un luogo</b> per aprirlo in Google Maps.
+</div>
+
+<div class="legend">
+  <span><span class="sw" style="background:var(--focus-bg); border:2px solid var(--focus);"></span>Oggi (auto)</span>
+  <span><span class="sw" style="background:var(--camp-bg); border:1px solid var(--camp-line);"></span>Notte in campeggio</span>
+  <span><svg width="14" height="14"><use href="#i-clock"/></svg>Orari — verifica gli orari</span>
+</div>
+
+<!-- DAY 1 -->
+<div class="day" data-date="2026-08-01">
+  <div class="toprow">
+    <span class="dnum"><span class="n">1</span>Sab 1 Ago</span>
+    <span class="pills"><span class="pill daytrip">Partenza</span></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione</span>Cobar</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Dee Why <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> Cobar</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~8h 30m</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~710 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>Blue Mountains · Bathurst · Orange · <a href="https://www.google.com/maps/search/?api=1&amp;query=Dubbo+NSW" target="_blank" rel="noopener">Dubbo</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Nyngan+NSW" target="_blank" rel="noopener">Nyngan</a>, la "porta dell'outback"</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Cobar+Caravan+Park" target="_blank" rel="noopener">Cobar Caravan Park</a> — 2 bungalow</div>
+  <div class="wx">
+    <span class="chip"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">17°</span> / <span class="lo">7°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:05</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>17:41</span>
+    <span class="chip">Asciutto e soleggiato</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li>Turni alla guida: Marco &amp; Giulia al volante, Vittoria &amp; Luca a godersi il viaggio.</li>
+    <li>Notte di transito dopo la lunga tirata verso ovest. <em>Fate rifornimento e scorte qui.</em></li>
+    <li><a href="https://www.google.com/maps/search/?api=1&amp;query=Great+Cobar+Heritage+Centre" target="_blank" rel="noopener">Great Cobar Heritage Centre</a> nel vecchio ufficio della miniera, se arrivate con ancora un po' di luce.</li>
+  </ul>
+</div>
+
+<!-- DAY 2 -->
+<div class="day" data-date="2026-08-02">
+  <div class="toprow">
+    <span class="dnum"><span class="n">2</span>Dom 2 Ago</span>
+    <span class="pills"></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione</span>Broken Hill</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Cobar <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> Broken Hill</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~5h</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~455 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>Barrier Highway · Emmdale roadhouse · <a href="https://www.google.com/maps/search/?api=1&amp;query=Wilcannia+NSW" target="_blank" rel="noopener">Wilcannia</a> sul Darling River · lunghe pianure di saltbush</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Palace+Hotel+Broken+Hill" target="_blank" rel="noopener">Palace Hotel</a> — Priscilla Suite</div>
+  <div class="wx">
+    <span class="chip"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">19°</span> / <span class="lo">6°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>6:52</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>17:28</span>
+    <span class="chip">Asciutto e soleggiato</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li>Il <a href="https://www.google.com/maps/search/?api=1&amp;query=Palace+Hotel+Broken+Hill" target="_blank" rel="noopener">Palace Hotel</a> — il luogo simbolo di <em>Priscilla, la regina del deserto</em> in cui dormite.</li>
+    <li><a href="https://discoverbrokenhill.com.au/the-living-desert-and-sculptures/" target="_blank" rel="noopener">Living Desert Sculptures</a> su Sundown Hill — calcolate la salita per il tramonto (~17:28).</li>
+    <li><a href="https://www.google.com/maps/search/?api=1&amp;query=Line+of+Lode+Miners+Memorial+Broken+Hill" target="_blank" rel="noopener">Line of Lode</a>, memoriale dei minatori &amp; punto panoramico sulla città.</li>
+  </ul>
+  <div class="timed">
+    <div class="timed-row"><svg width="16" height="16"><use href="#i-clock"/></svg>
+      <div><span class="name"><a href="https://discoverbrokenhill.com.au/the-living-desert-and-sculptures/" target="_blank" rel="noopener">Living Desert Sculptures</a></span> — <span class="hrs">8:30 → ~30 min dopo il tramonto (≈18:00)</span><br><span class="hrs">$6 a persona · <span class="flag">andateci al tramonto</span></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 3 -->
+<div class="day" data-date="2026-08-03">
+  <div class="toprow">
+    <span class="dnum"><span class="n">3</span>Lun 3 Ago</span>
+    <span class="pills"><span class="pill daytrip">Gita in giornata</span></span>
+  </div>
+  <div class="place"><span class="lead">Base a Broken Hill</span>Silverton</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Broken Hill <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Silverton+NSW" target="_blank" rel="noopener">Silverton</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~25 min a tratta</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~25 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>svincolo per Living Desert · <a href="https://www.google.com/maps/search/?api=1&amp;query=Mundi+Mundi+Plains+Lookout" target="_blank" rel="noopener">Mundi Mundi Plains lookout</a> appena fuori dal paese</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Palace+Hotel+Broken+Hill" target="_blank" rel="noopener">Palace Hotel</a> — Priscilla Suite (2ª notte)</div>
+  <div class="wx">
+    <span class="chip"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">19°</span> / <span class="lo">6°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>6:52</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>17:28</span>
+    <span class="chip">Asciutto e soleggiato</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li><a href="https://www.google.com/maps/search/?api=1&amp;query=Silverton+NSW" target="_blank" rel="noopener">Silverton</a>, città fantasma — <a href="https://www.google.com/maps/search/?api=1&amp;query=Mad+Max+Museum+Silverton" target="_blank" rel="noopener">Mad Max Museum</a>, gallerie d'arte, cammelli a spasso.</li>
+    <li>Pranzo al bancone del <a href="https://www.google.com/maps/search/?api=1&amp;query=Silverton+Hotel" target="_blank" rel="noopener">Silverton Hotel</a>; <a href="https://www.google.com/maps/search/?api=1&amp;query=Mundi+Mundi+Plains+Lookout" target="_blank" rel="noopener">Mundi Mundi Plains lookout</a> per l'orizzonte.</li>
+    <li>La storica <a href="https://www.google.com/maps/search/?api=1&amp;query=Day+Dream+Mine+Silverton" target="_blank" rel="noopener">Day Dream Mine</a> (a 13 km da Silverton Rd) — <em>telefonate in anticipo per prenotare una visita.</em></li>
+  </ul>
+</div>
+
+<!-- DAY 4 -->
+<div class="day" data-date="2026-08-04">
+  <div class="toprow">
+    <span class="dnum"><span class="n">4</span>Mar 4 Ago</span>
+    <span class="pills"></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione</span>Spud's Roadhouse, Pimba</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Broken Hill <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Pimba+SA" target="_blank" rel="noopener">Pimba</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~6h 30m</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~510 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>si entra in SA · <a href="https://www.google.com/maps/search/?api=1&amp;query=Yunta+SA" target="_blank" rel="noopener">Yunta</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Peterborough+SA" target="_blank" rel="noopener">Peterborough</a> · la punta dello Spencer Gulf vicino a Port Augusta, poi Stuart Hwy verso nord</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Spuds+Roadhouse+Pimba" target="_blank" rel="noopener">Spud's Roadhouse</a> (svincolo per Woomera)</div>
+  <div class="wx">
+    <span class="chip"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">19°</span> / <span class="lo">9°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:08</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>17:49</span>
+    <span class="chip">Asciutto e soleggiato</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li>La <a href="https://www.google.com/maps/search/?api=1&amp;query=Spuds+Roadhouse+Pimba" target="_blank" rel="noopener">roadhouse</a> in sé — un classico polveroso, pieno di cimeli di razzi. Ordinate la schnitzel.</li>
+    <li>Deviazione a Woomera: il <a href="https://www.google.com/maps/search/?api=1&amp;query=Woomera+Missile+Park" target="_blank" rel="noopener">Missile Park &amp; Heritage Centre</a> all'aperto.</li>
+  </ul>
+</div>
+
+<!-- DAY 5 -->
+<div class="day" data-date="2026-08-05">
+  <div class="toprow">
+    <span class="dnum"><span class="n">5</span>Mer 5 Ago</span>
+    <span class="pills"></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione</span>Coober Pedy</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Pimba <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Coober+Pedy" target="_blank" rel="noopener">Coober Pedy</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~4h</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~370 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>il lago salato <a href="https://www.google.com/maps/search/?api=1&amp;query=Lake+Hart+SA" target="_blank" rel="noopener">Lake Hart</a> (vale una sosta) · <a href="https://www.google.com/maps/search/?api=1&amp;query=Glendambo+SA" target="_blank" rel="noopener">Glendambo</a>, celebre per il suo cartello della "popolazione"</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=underground+motel+Coober+Pedy" target="_blank" rel="noopener">Motel sotterraneo</a> (White Cliffs / Desert Hideaway)</div>
+  <div class="wx">
+    <span class="chip"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">22°</span> / <span class="lo">7°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:12</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>18:01</span>
+    <span class="chip">Asciutto e soleggiato</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li><b>Grande rifornimento di scorte</b> — comprate tutto il cibo &amp; l'acqua per i giorni di campeggio che seguono. <em>Poco o nessun negozio fino ad Alice.</em></li>
+    <li><a href="https://umoonaopalmine.com.au/" target="_blank" rel="noopener">Museo dell'opale</a> &amp; visita alla miniera sotterranea — l'attrazione principale della città.</li>
+    <li>Il rifugio scavato di <a href="https://www.google.com/maps/search/?api=1&amp;query=Crocodile+Harrys+Coober+Pedy" target="_blank" rel="noopener">Crocodile Harry's</a> — la dimora sotterranea straordinariamente eccentrica.</li>
+    <li><a href="https://www.google.com/maps/search/?api=1&amp;query=Kanku-Breakaways+Conservation+Park" target="_blank" rel="noopener">Kanku-Breakaways</a> Conservation Park — paesaggio lunare &amp; la Dog Fence, a ~25 min.</li>
+    <li><em>Portate acqua potabile; la colazione al general store apre alle 8:00.</em></li>
+  </ul>
+  <div class="timed">
+    <div class="timed-row"><svg width="16" height="16"><use href="#i-clock"/></svg>
+      <div><span class="name"><a href="https://umoonaopalmine.com.au/" target="_blank" rel="noopener">Umoona Opal Mine &amp; Museum</a></span> — <span class="hrs">tutti i giorni 8:30–17:30 · museo gratuito</span><br><span class="hrs">Visite guidate alla miniera 10:00 / 14:00 / 16:00 (~$15,50 adulto)</span></div>
+    </div>
+    <div class="timed-row"><svg width="16" height="16"><use href="#i-clock"/></svg>
+      <div><span class="name"><a href="https://www.google.com/maps/search/?api=1&amp;query=Kanku-Breakaways+Conservation+Park" target="_blank" rel="noopener">Kanku-Breakaways</a></span> — <span class="hrs">accesso libero, serve un pass parchi SA · <span class="flag">guidate con la luce del giorno</span></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 6 -->
+<div class="day camp" data-date="2026-08-06">
+  <div class="toprow">
+    <span class="dnum"><span class="n">6</span>Gio 6 Ago</span>
+    <span class="pills"><span class="pill camp">Campeggio</span></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione</span>Kings Creek Station</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Coober Pedy <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Kings+Creek+Station" target="_blank" rel="noopener">Kings Creek</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~7h 30m</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~740 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>Cadney Homestead · <a href="https://www.google.com/maps/search/?api=1&amp;query=Marla+SA" target="_blank" rel="noopener">Marla</a> · si entra nel NT · <a href="https://www.google.com/maps/search/?api=1&amp;query=Kulgera+NT" target="_blank" rel="noopener">Kulgera</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Erldunda" target="_blank" rel="noopener">Erldunda</a> (svolta a ovest sulla Lasseter Hwy) · Mt Ebenezer</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-tent"/></svg>2 tende · <a href="https://www.google.com/maps/search/?api=1&amp;query=Kings+Creek+Station" target="_blank" rel="noopener">Kings Creek Station</a></div>
+  <div class="wx">
+    <span class="chip cold"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">24°</span> / <span class="lo">8°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:16</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>18:21</span>
+    <span class="chip">Sereno · notte fredda</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li>Lunga tirata verso nord — una giornata di arrivo e montaggio del campo.</li>
+    <li>Alla <a href="https://www.google.com/maps/search/?api=1&amp;query=Kings+Creek+Station" target="_blank" rel="noopener">station</a>: giri in cammello, tour in quad, o un volo panoramico in elicottero sul canyon.</li>
+    <li><em>Prima notte in tenda — vicino alle catene montuose le notti possono scendere quasi allo zero. Sacchi caldi &amp; strati.</em></li>
+  </ul>
+</div>
+
+<!-- DAY 7 -->
+<div class="day camp" data-date="2026-08-07">
+  <div class="toprow">
+    <span class="dnum"><span class="n">7</span>Ven 7 Ago</span>
+    <span class="pills"><span class="pill camp">Campeggio</span></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione</span>Ridgetop Campground</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Kings Canyon <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Redbank+Gorge+Ridgetop+Campground" target="_blank" rel="noopener">Ridgetop</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~3h 10m di guida</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~200 km · permesso 4WD</span>
+  </div>
+  <div class="through"><b>Attraverso</b><a href="https://www.google.com/maps/search/?api=1&amp;query=Mereenie+Loop" target="_blank" rel="noopener">Mereenie Loop</a> (sterrata) · <a href="https://www.google.com/maps/search/?api=1&amp;query=Gintys+Lookout" target="_blank" rel="noopener">Ginty's Lookout</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Tnorala+Gosse+Bluff" target="_blank" rel="noopener">Gosse Bluff / Tnorala</a>, un cratere di cometa di 140 milioni di anni</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-tent"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Redbank+Gorge+Ridgetop+Campground" target="_blank" rel="noopener">Ridgetop</a> (Tjoritja / West MacDonnells) <span class="conf">· piazzola 1 · conf 593877</span></div>
+  <div class="wx">
+    <span class="chip cold"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">23°</span> / <span class="lo">5°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:11</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>18:19</span>
+    <span class="chip">Sereno · notte fredda</span>
+  </div>
+  <h4>Prima di partire e lungo la strada</h4>
+  <ul class="see">
+    <li><b><a href="https://www.google.com/maps/search/?api=1&amp;query=Kings+Canyon+Rim+Walk" target="_blank" rel="noopener">Kings Canyon Rim Walk</a></b> all'alba — anello di 6 km, 3–4 ore, solo in senso orario, ~500 gradini per iniziare. Deviazione al Garden of Eden.</li>
+    <li>Comprate il permesso <a href="https://www.google.com/maps/search/?api=1&amp;query=Mereenie+Loop" target="_blank" rel="noopener">Mereenie Loop</a> &amp; fate il pieno prima di lasciare Watarrka.</li>
+    <li>Ridgetop si trova all'estremità occidentale delle West Macs — tramonto sul Mt Sonder.</li>
+  </ul>
+  <div class="timed">
+    <div class="timed-row"><svg width="16" height="16"><use href="#i-clock"/></svg>
+      <div><span class="name">Regola caldo Rim Walk</span> — <span class="hrs">i cancelli chiudono alle 9:00 solo se la previsione tocca i 36°C+.</span><br><span class="hrs"><span class="flag">Non varrà ad agosto</span> — ma partite all'alba (~7:11) per la luce e il fresco.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 8 -->
+<div class="day camp" data-date="2026-08-08">
+  <div class="toprow">
+    <span class="dnum"><span class="n">8</span>Sab 8 Ago</span>
+    <span class="pills"><span class="pill camp">Campeggio</span></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione</span>Ellery Creek Big Hole</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Ridgetop <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Ellery+Creek+Big+Hole" target="_blank" rel="noopener">Ellery Creek</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~1h 30m</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~100 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>la catena di gole su Namatjira Drive — <a href="https://www.google.com/maps/search/?api=1&amp;query=Redbank+Gorge" target="_blank" rel="noopener">Redbank Gorge</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Ormiston+Gorge" target="_blank" rel="noopener">Ormiston Gorge</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Serpentine+Gorge" target="_blank" rel="noopener">Serpentine Gorge</a> · panorami sul Mt Sonder</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-tent"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Ellery+Creek+Big+Hole" target="_blank" rel="noopener">Ellery Creek</a> — piazzola 4 <span class="conf">· conf 593880</span></div>
+  <div class="wx">
+    <span class="chip cold"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">23°</span> / <span class="lo">5°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:09</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>18:17</span>
+    <span class="chip">Sereno · notte fredda</span>
+  </div>
+  <h4>Lungo il tragitto e al campo</h4>
+  <ul class="see">
+    <li><a href="https://www.google.com/maps/search/?api=1&amp;query=Redbank+Gorge" target="_blank" rel="noopener">Redbank Gorge</a> — nuotate nella gola stretta e gelida se avete un materassino.</li>
+    <li><a href="https://www.google.com/maps/search/?api=1&amp;query=Ormiston+Gorge" target="_blank" rel="noopener">Ormiston Gorge</a> — la Ghost Gum Walk (~1,5 ore) e un chiosco per pranzo.</li>
+    <li>Punto panoramico di <a href="https://www.google.com/maps/search/?api=1&amp;query=Serpentine+Gorge" target="_blank" rel="noopener">Serpentine Gorge</a> — più tranquillo, panoramico sulle catene montuose.</li>
+    <li><em>Le piazzole nei parchi del NT vanno prenotate online in anticipo (avete la piazzola 4).</em></li>
+  </ul>
+</div>
+
+<!-- DAY 9 -->
+<div class="day" data-date="2026-08-09">
+  <div class="toprow">
+    <span class="dnum"><span class="n">9</span>Dom 9 Ago</span>
+    <span class="pills"></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione</span>Alice Springs</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Ellery Creek <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Alice+Springs" target="_blank" rel="noopener">Alice Springs</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~1h 45m</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~90 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b><a href="https://standleychasm.com.au/" target="_blank" rel="noopener">Standley Chasm</a> · <a href="https://nt.gov.au/parks/find-a-park/tjoritja-west-macdonnell-national-park/simpsons-gap" target="_blank" rel="noopener">Simpson Gap</a> — entrambi su Larapinta Drive verso la città</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Alice+on+Todd+Apartments" target="_blank" rel="noopener">Alice On Todd Apartments</a> <span class="conf">· booking.com</span></div>
+  <div class="wx">
+    <span class="chip"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">23°</span> / <span class="lo">7°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:05</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>18:15</span>
+    <span class="chip">Asciutto e soleggiato</span>
+  </div>
+  <h4>Lungo il tragitto e alla meta</h4>
+  <ul class="see">
+    <li>Bagno mattutino a <a href="https://www.google.com/maps/search/?api=1&amp;query=Ellery+Creek+Big+Hole" target="_blank" rel="noopener">Ellery Creek Big Hole</a> prima di ripartire.</li>
+    <li><a href="https://standleychasm.com.au/" target="_blank" rel="noopener">Standley Chasm</a> (Angkerle Atwatye) — al meglio quando il sole di mezzogiorno illumina le pareti di 80 m.</li>
+    <li><a href="https://nt.gov.au/parks/find-a-park/tjoritja-west-macdonnell-national-park/simpsons-gap" target="_blank" rel="noopener">Simpson Gap</a> — wallaby dai piedi neri sui ghiaioni al crepuscolo.</li>
+  </ul>
+  <div class="timed">
+    <div class="timed-row"><svg width="16" height="16"><use href="#i-clock"/></svg>
+      <div><span class="name"><a href="https://standleychasm.com.au/" target="_blank" rel="noopener">Standley Chasm</a></span> — <span class="hrs"><span class="flag">domenica 8:00–14:00</span> (lun–sab 8–17)</span><br><span class="hrs">~$12 adulto · oggi è domenica, quindi chiude alle 14:00 — andateci a mezzogiorno</span></div>
+    </div>
+    <div class="timed-row"><svg width="16" height="16"><use href="#i-clock"/></svg>
+      <div><span class="name"><a href="https://nt.gov.au/parks/find-a-park/tjoritja-west-macdonnell-national-park/simpsons-gap" target="_blank" rel="noopener">Simpson Gap</a></span> — <span class="hrs">cancello veicoli all'incirca 5:00–20:00 · wallaby al meglio al crepuscolo</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- DAY 10 -->
+<div class="day" data-date="2026-08-10">
+  <div class="toprow">
+    <span class="dnum"><span class="n">10</span>Lun 10 Ago</span>
+    <span class="pills"></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione</span>Marla</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Alice Springs <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Marla+SA" target="_blank" rel="noopener">Marla</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~4h 30m</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~470 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>Stuart Hwy verso sud · <a href="https://www.google.com/maps/search/?api=1&amp;query=Erldunda" target="_blank" rel="noopener">Erldunda</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Kulgera+NT" target="_blank" rel="noopener">Kulgera</a> (ultima sosta nel NT) · si rientra in SA</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Marla+Travellers+Rest" target="_blank" rel="noopener">Marla Travellers Rest</a> — camera standard, matrimoniale + 2 singoli <span class="conf">· $170</span></div>
+  <div class="wx">
+    <span class="chip"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">23°</span> / <span class="lo">7°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:10</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>18:11</span>
+    <span class="chip">Asciutto e soleggiato</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li>Lasciate Luca all'aeroporto di Alice per il suo <b>volo delle 13:30 per Sydney</b> <span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--muted)">(conf DUPNUY)</span>; Marco &amp; le ragazze proseguono verso sud.</li>
+    <li>Classica notte in roadhouse sulla Stuart Highway — carburante, cena, sonno. <em>Le temperature qui sono le meno documentate del percorso; consideratele approssimative.</em></li>
+  </ul>
+</div>
+
+<!-- DAY 11 -->
+<div class="day" data-date="2026-08-11">
+  <div class="toprow">
+    <span class="dnum"><span class="n">11</span>Mar 11 Ago</span>
+    <span class="pills"></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione · ritorno</span>Port Augusta</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Marla <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Port+Augusta+SA" target="_blank" rel="noopener">Port Augusta</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~7h 45m</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~690 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>di nuovo <a href="https://www.google.com/maps/search/?api=1&amp;query=Coober+Pedy" target="_blank" rel="noopener">Coober Pedy</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Glendambo+SA" target="_blank" rel="noopener">Glendambo</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Lake+Hart+SA" target="_blank" rel="noopener">Lake Hart</a> · svincolo per Pimba / Woomera</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Discovery+Parks+Port+Augusta" target="_blank" rel="noopener">Discovery Parks — Port Augusta</a> <span class="conf">· 2 camere</span></div>
+  <div class="wx">
+    <span class="chip"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">18°</span> / <span class="lo">7°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:00</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>17:48</span>
+    <span class="chip">Più fresco · possibile rovescio</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li><a href="https://www.google.com/maps/search/?api=1&amp;query=Australian+Arid+Lands+Botanic+Garden" target="_blank" rel="noopener">Australian Arid Lands Botanic Garden</a> — piante delle zone aride con vista sul golfo &amp; un caffè.</li>
+    <li><a href="https://www.google.com/maps/search/?api=1&amp;query=Wadlata+Outback+Centre" target="_blank" rel="noopener">Wadlata Outback Centre</a> — il racconto dell'outback nel "Tunnel of Time".</li>
+  </ul>
+</div>
+
+<!-- DAY 12 -->
+<div class="day" data-date="2026-08-12">
+  <div class="toprow">
+    <span class="dnum"><span class="n">12</span>Mer 12 Ago</span>
+    <span class="pills"></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione · ritorno</span>Hay</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Port Augusta <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> <a href="https://www.google.com/maps/search/?api=1&amp;query=Hay+NSW" target="_blank" rel="noopener">Hay</a></span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~9h</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~830 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b>la regione del Murray River / Riverland — <a href="https://www.google.com/maps/search/?api=1&amp;query=Renmark+SA" target="_blank" rel="noopener">Renmark</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Mildura+VIC" target="_blank" rel="noopener">Mildura</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Balranald+NSW" target="_blank" rel="noopener">Balranald</a>, poi fuori nella Hay Plain</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=Hay+NSW+accommodation" target="_blank" rel="noopener">Hay</a> (pernottamento)</div>
+  <div class="wx">
+    <span class="chip cold"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">17°</span> / <span class="lo">5°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>7:04</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>17:47</span>
+    <span class="chip">Fresco · possibile pioggia</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li>La tratta più lunga — una notte di riposo sulla via di casa. <em>La mattina più fredda dei giorni di guida.</em></li>
+    <li>Sgranchitevi sulla passeggiata lungo il fiume a Hay, oppure <a href="https://www.google.com/maps/search/?api=1&amp;query=Shear+Outback+Hay" target="_blank" rel="noopener">Shear Outback</a> se c'è tempo.</li>
+  </ul>
+</div>
+
+<!-- DAY 13 -->
+<div class="day" data-date="2026-08-13">
+  <div class="toprow">
+    <span class="dnum"><span class="n">13</span>Gio 13 Ago</span>
+    <span class="pills"><span class="pill home">Casa</span></span>
+  </div>
+  <div class="place"><span class="lead">Destinazione · giro concluso</span>Dee Why</div>
+  <div class="drive">
+    <span class="leg"><svg width="16" height="16"><use href="#i-car"/></svg>Hay <svg width="14" height="14" style="color:var(--faint)"><use href="#i-arrow"/></svg> Dee Why</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-clock"/></svg>~7h 45m</span>
+    <span class="metric"><svg width="14" height="14"><use href="#i-road"/></svg>~730 km</span>
+  </div>
+  <div class="through"><b>Attraverso</b><a href="https://www.google.com/maps/search/?api=1&amp;query=Narrandera+NSW" target="_blank" rel="noopener">Narrandera</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Wagga+Wagga+NSW" target="_blank" rel="noopener">Wagga Wagga</a> · la Hume Highway &amp; la risalita sulla Great Dividing Range fino alla costa</div>
+  <div class="sleep"><svg width="15" height="15"><use href="#i-bed"/></svg>Casa</div>
+  <div class="wx">
+    <span class="chip"><svg width="14" height="14"><use href="#i-sun"/></svg><span class="hi">19°</span> / <span class="lo">9°</span></span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunrise"/></svg>6:36</span>
+    <span class="chip"><svg width="13" height="13"><use href="#i-sunset"/></svg>17:23</span>
+    <span class="chip">Costa mite</span>
+  </div>
+  <h4>Alla meta</h4>
+  <ul class="see">
+    <li>Ultima tratta di ritorno alle spiagge — 12 tappe e un grande giro, fatto.</li>
+  </ul>
+</div>
+
+<footer>
+  Le temperature sono medie storiche di agosto (°C) — controllate una previsione in tempo reale ~5 giorni prima di ogni tratta.<br>
+  I tempi di guida sono le stime del vostro piano; le distanze sono approssimative. Alba/tramonto in ora locale (NSW su AEST; SA &amp; NT su ACST, 30 min indietro; Broken Hill segue l'ora della SA).<br>
+  Orari di apertura verificati a luglio 2026 — confermate prima di partire, poiché gli operatori remoti cambiano stagionalmente. I link dei luoghi si aprono in Google Maps. Tocca un giorno qualsiasi per metterlo a fuoco.
+</footer>

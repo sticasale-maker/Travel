@@ -21,6 +21,13 @@ create table if not exists public.travel_notes (
   updated_at   timestamptz not null default now()
 );
 
+-- Bilingual columns: author's language + per-language bodies (auto-translated).
+-- `body` keeps the original text; body_en / body_it hold the two versions.
+alter table public.travel_notes
+  add column if not exists lang    text not null default 'en',
+  add column if not exists body_en text default '',
+  add column if not exists body_it text default '';
+
 create index if not exists travel_notes_day_idx  on public.travel_notes (day_key, captured_at);
 create index if not exists travel_notes_user_idx on public.travel_notes (user_id);
 

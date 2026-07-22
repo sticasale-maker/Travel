@@ -1,8 +1,10 @@
 /* itinerary.js — shared by index.html (poster) and read.html (reader).
-   Loads the itinerary markup partial, injects it, runs the today-auto-focus
-   and tap-to-focus behaviour, then fires `itinerary:ready` for notes.js. */
+   Loads the itinerary markup partial for the current language, runs the
+   today-auto-focus + tap-to-focus behaviour, then fires `itinerary:ready`
+   (each render) so map.js and notes.js can (re)build. Reloads on language change. */
 (function () {
   var MOUNT = document.getElementById('itinerary-mount');
+  var I18N = window.I18N;
 
   function runFocus() {
     var days = Array.prototype.slice.call(document.querySelectorAll('.day'));
@@ -17,7 +19,6 @@
       var dt = new Date(d.dataset.date + 'T00:00:00');
       if (dt.getTime() === today.getTime()) { focusEl = d; focusNum = i + 1; }
       d.addEventListener('click', function (e) {
-        // ignore link clicks and anything inside the notes UI
         if (e.target.closest('a')) return;
         if (e.target.closest('.notes')) return;
         days.forEach(function (x) { x.classList.remove('focus'); });
@@ -26,56 +27,58 @@
     });
 
     function fmt(dt) {
-      return dt.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+      return dt.toLocaleDateString(I18N.locale(), { weekday: 'short', day: 'numeric', month: 'short' });
     }
-
-    if (!bText) return;
+    function setBanner(html) { if (bText) bText.innerHTML = html; }
 
     if (focusEl) {
       focusEl.classList.add('focus');
       var pills = focusEl.querySelector('.pills');
       if (pills && !pills.querySelector('.pill.today')) {
         var t = document.createElement('span');
-        t.className = 'pill today'; t.textContent = 'Today';
+        t.className = 'pill today'; t.textContent = I18N.lang === 'it' ? 'Oggi' : 'Today';
         pills.insertBefore(t, pills.firstChild);
       }
-      bText.innerHTML = 'Today is <b>' + fmt(today) + '</b> · Day ' + focusNum + ' of the trip';
+      setBanner(I18N.t('banner_today', { date: fmt(today), n: focusNum }));
       if (jump) {
+        jump.textContent = I18N.t('jump_today');
         jump.style.display = 'inline';
-        jump.addEventListener('click', function () {
-          focusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
+        jump.onclick = function () { focusEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
       }
       setTimeout(function () {
         focusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 350);
     } else if (today < start) {
       var n = Math.round((start - today) / 86400000);
-      bText.innerHTML = 'Trip starts <b>' + fmt(start) + '</b> · ' + n + ' day' + (n === 1 ? '' : 's') + ' to go';
+      setBanner(I18N.t(n === 1 ? 'banner_starts_one' : 'banner_starts_many', { date: fmt(start), n: n }));
       if (days[0]) days[0].classList.add('focus');
     } else if (today > end) {
-      bText.innerHTML = 'Trip complete — <b>welcome home</b>';
+      setBanner(I18N.t('banner_complete'));
     } else {
-      bText.innerHTML = 'Today is <b>' + fmt(today) + '</b>';
+      setBanner(I18N.t('banner_today_only', { date: fmt(today) }));
     }
   }
 
-  function ready() {
-    runFocus();
-    document.dispatchEvent(new CustomEvent('itinerary:ready'));
+  function load(lang) {
+    return fetch('itinerary.' + lang + '.html', { cache: 'no-cache' })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        MOUNT.innerHTML = html;
+        runFocus();
+        document.dispatchEvent(new CustomEvent('itinerary:ready'));
+      })
+      .catch(function () {
+        if (MOUNT) MOUNT.innerHTML =
+          '<div class="note"><b>' +
+          (lang === 'it' ? 'Impossibile caricare l’itinerario.' : 'Couldn’t load the itinerary.') +
+          '</b> ' +
+          (lang === 'it'
+            ? 'Apri questa pagina una volta con connessione per salvarla offline.'
+            : 'Open this page once while online so it can save offline.') +
+          '</div>';
+      });
   }
 
-  // Fetch the shared markup partial and inject it. Precached by the service
-  // worker, so this resolves from cache when offline.
-  fetch('itinerary.html', { cache: 'no-cache' })
-    .then(function (r) { return r.text(); })
-    .then(function (html) {
-      MOUNT.innerHTML = html;
-      ready();
-    })
-    .catch(function () {
-      if (MOUNT) MOUNT.innerHTML =
-        '<div class="note"><b>Couldn’t load the itinerary.</b> ' +
-        'Open this page once while online so it can save offline.</div>';
-    });
+  load(I18N.lang);
+  I18N.onChange(function (lang) { load(lang); });
 })();

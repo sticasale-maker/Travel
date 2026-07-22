@@ -1,29 +1,35 @@
-/* notes.js — offline-first travel notes for the Outback Loop PWA.
+/* notes.js — offline-first travel JOURNAL for the Outback Loop PWA.
    Poster (index.html): capture + sync + display.  Reader (read.html): display only.
 
-   Storage: IndexedDB holds this device's authored notes and pending photo blobs,
+   Each entry stores the author's language plus per-language bodies (body_en /
+   body_it). The author's words go in their own language column; a Supabase
+   function fills the other on sync (auto-translate). Display picks the UI
+   language, falling back to the original when no translation exists yet.
+
+   Storage: IndexedDB holds this device's authored entries + pending photo blobs,
    so capture works with zero network and survives restarts. A sync engine pushes
    the queue to Supabase (auth + Postgres row + Storage upload) when online. */
 (function () {
   'use strict';
 
-  // ---- Ordering within a day: 'asc' = oldest-first (diary). Flip to 'desc' for newest-first.
+  // Ordering within a day: 'asc' = oldest-first (reads like a diary). Flip to 'desc'.
   var ORDER = 'asc';
 
   var MODE = window.TRAVEL_MODE === 'reader' ? 'reader' : 'poster';
   var CFG = window.TRAVEL_CONFIG || {};
+  var I18N = window.I18N;
   var CONFIGURED = CFG.SUPABASE_URL && CFG.SUPABASE_URL.indexOf('YOUR-PROJECT') === -1 &&
                    CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY.indexOf('YOUR-') === -1;
   var BUCKET = 'travel-photos';
 
   var state = {
-    sb: null,          // supabase client
-    uid: null,         // auth.uid() once signed in (poster)
+    sb: null, uid: null,
     author: localStorage.getItem('travel_author') || '',
-    remote: [],        // last-fetched remote notes (all authors)
-    syncing: false,
-    attempts: {}       // note id -> {count, nextTry}
+    remote: [], syncing: false, attempts: {}, booted: false
   };
+
+  function t(k, v) { return I18N ? I18N.t(k, v) : k; }
+  function lang() { return I18N ? I18N.lang : 'en'; }
 
   // ---------------------------------------------------------------- helpers
   function uuid() {
@@ -41,9 +47,19 @@
   }
   function fmtTime(iso) {
     try {
-      return new Date(iso).toLocaleString('en-AU',
+      return new Date(iso).toLocaleString(I18N ? I18N.locale() : 'en-AU',
         { weekday: 'short', hour: 'numeric', minute: '2-digit' });
     } catch (e) { return ''; }
+  }
+  function cssEsc(s) { return String(s).replace(/"/g, '\\"'); }
+
+  // Choose the body text for the current UI language, else fall back to original.
+  function pickBody(n) {
+    var ui = lang();
+    var col = ui === 'it' ? n.body_it : n.body_en;
+    if (col && col.trim()) return { text: col, translated: !!(n.lang && n.lang !== ui) };
+    var orig = n.body || n.body_en || n.body_it || '';
+    return { text: orig, translated: false };
   }
 
   // ---------------------------------------------------------------- IndexedDB
@@ -54,59 +70,36 @@
       var req = indexedDB.open('travel-notes-db', 1);
       req.onupgradeneeded = function (e) {
         var db = e.target.result;
-        if (!db.objectStoreNames.contains('notes')) {
-          db.createObjectStore('notes', { keyPath: 'id' });
-        }
+        if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('photos')) {
-          var ps = db.createObjectStore('photos', { keyPath: 'id' });
-          ps.createIndex('note_id', 'note_id', { unique: false });
+          db.createObjectStore('photos', { keyPath: 'id' }).createIndex('note_id', 'note_id', { unique: false });
         }
       };
       req.onsuccess = function () { DB = req.result; resolve(DB); };
       req.onerror = function () { reject(req.error); };
     });
   }
-  function tx(store, mode) {
-    return openDB().then(function (db) {
-      return db.transaction(store, mode).objectStore(store);
-    });
-  }
-  function idbReq(r) {
-    return new Promise(function (res, rej) {
-      r.onsuccess = function () { res(r.result); };
-      r.onerror = function () { rej(r.error); };
-    });
-  }
+  function tx(store, mode) { return openDB().then(function (db) { return db.transaction(store, mode).objectStore(store); }); }
+  function idbReq(r) { return new Promise(function (res, rej) { r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); }
   function putNote(n) { return tx('notes', 'readwrite').then(function (s) { return idbReq(s.put(n)); }); }
   function delNote(id) { return tx('notes', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
   function allNotes() { return tx('notes', 'readonly').then(function (s) { return idbReq(s.getAll()); }); }
   function putPhoto(p) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.put(p)); }); }
   function delPhoto(id) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
-  function photosFor(noteId) {
-    return tx('photos', 'readonly').then(function (s) {
-      return idbReq(s.index('note_id').getAll(noteId));
-    });
-  }
+  function photosFor(id) { return tx('photos', 'readonly').then(function (s) { return idbReq(s.index('note_id').getAll(id)); }); }
 
   // ---------------------------------------------------------------- photos
-  // Downscale to PHOTO_MAX_DIM longest edge, export JPEG. Returns a Blob.
   function shrink(file) {
-    var maxDim = CFG.PHOTO_MAX_DIM || 1600;
-    var quality = CFG.PHOTO_JPEG_QUALITY || 0.7;
+    var maxDim = CFG.PHOTO_MAX_DIM || 1600, quality = CFG.PHOTO_JPEG_QUALITY || 0.7;
     return new Promise(function (resolve) {
-      var img = new Image();
-      var url = URL.createObjectURL(file);
+      var img = new Image(), url = URL.createObjectURL(file);
       img.onload = function () {
-        var w = img.naturalWidth, h = img.naturalHeight;
-        var scale = Math.min(1, maxDim / Math.max(w, h));
+        var w = img.naturalWidth, h = img.naturalHeight, scale = Math.min(1, maxDim / Math.max(w, h));
         var cw = Math.round(w * scale), ch = Math.round(h * scale);
-        var c = document.createElement('canvas');
-        c.width = cw; c.height = ch;
+        var c = document.createElement('canvas'); c.width = cw; c.height = ch;
         c.getContext('2d').drawImage(img, 0, 0, cw, ch);
         URL.revokeObjectURL(url);
-        c.toBlob(function (blob) {
-          resolve(blob || file);
-        }, 'image/jpeg', quality);
+        c.toBlob(function (blob) { resolve(blob || file); }, 'image/jpeg', quality);
       };
       img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
       img.src = url;
@@ -118,9 +111,7 @@
     if (!CONFIGURED || !window.supabase || !window.supabase.createClient) return;
     state.sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
   }
-
   function ensureAuth() {
-    // Poster only. Reuses persisted session; signs in anonymously if needed.
     if (MODE !== 'poster' || !state.sb) return Promise.resolve(null);
     return state.sb.auth.getSession().then(function (res) {
       var session = res && res.data && res.data.session;
@@ -132,54 +123,36 @@
       });
     }).catch(function () { return null; });
   }
-
   function publicUrl(path) {
     if (!state.sb) return '';
     return state.sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
   }
-
   function fetchRemote() {
     if (!state.sb) return Promise.resolve();
-    return state.sb.from('travel_notes')
-      .select('*')
-      .order('captured_at', { ascending: true })
-      .then(function (res) {
-        if (!res.error && res.data) { state.remote = res.data; renderAll(); }
-      })
+    return state.sb.from('travel_notes').select('*').order('captured_at', { ascending: true })
+      .then(function (res) { if (!res.error && res.data) { state.remote = res.data; renderAll(); } })
       .catch(function () {});
   }
 
-  // ---------------------------------------------------------------- sync engine
-  function backoffReady(id) {
-    var a = state.attempts[id];
-    return !a || Date.now() >= a.nextTry;
-  }
+  // ---------------------------------------------------------------- sync
+  function backoffReady(id) { var a = state.attempts[id]; return !a || Date.now() >= a.nextTry; }
   function noteFailed(id) {
-    var a = state.attempts[id] || { count: 0 };
-    a.count += 1;
-    a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1));
-    state.attempts[id] = a;
+    var a = state.attempts[id] || { count: 0 }; a.count += 1;
+    a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1)); state.attempts[id] = a;
   }
   function noteOK(id) { delete state.attempts[id]; }
 
   function syncNote(n) {
-    // Upload this note's pending photos, then upsert/delete its row.
     if (n.pending_op === 'delete') {
       var paths = n.photo_paths || [];
-      var rm = paths.length
-        ? state.sb.storage.from(BUCKET).remove(paths).catch(function () {})
-        : Promise.resolve();
-      return rm.then(function () {
-        return state.sb.from('travel_notes').delete().eq('id', n.id);
-      }).then(function (res) {
-        if (res.error) throw res.error;
-        return photosFor(n.id).then(function (ps) {
-          return Promise.all(ps.map(function (p) { return delPhoto(p.id); }));
-        }).then(function () { return delNote(n.id); });
-      });
+      var rm = paths.length ? state.sb.storage.from(BUCKET).remove(paths).catch(function () {}) : Promise.resolve();
+      return rm.then(function () { return state.sb.from('travel_notes').delete().eq('id', n.id); })
+        .then(function (res) {
+          if (res.error) throw res.error;
+          return photosFor(n.id).then(function (ps) { return Promise.all(ps.map(function (p) { return delPhoto(p.id); })); })
+            .then(function () { return delNote(n.id); });
+        });
     }
-
-    // create / update
     return photosFor(n.id).then(function (photos) {
       var pending = photos.filter(function (p) { return !p.uploaded; });
       var paths = (n.photo_paths || []).slice();
@@ -187,13 +160,11 @@
       pending.forEach(function (p) {
         chain = chain.then(function () {
           var path = state.uid + '/' + n.id + '/' + p.filename;
-          return state.sb.storage.from(BUCKET)
-            .upload(path, p.blob, { contentType: 'image/jpeg', upsert: true })
+          return state.sb.storage.from(BUCKET).upload(path, p.blob, { contentType: 'image/jpeg', upsert: true })
             .then(function (res) {
               if (res.error) throw res.error;
               if (paths.indexOf(path) === -1) paths.push(path);
-              p.uploaded = true; p.path = path;
-              return putPhoto(p);
+              p.uploaded = true; p.path = path; return putPhoto(p);
             });
         });
       });
@@ -201,13 +172,22 @@
         n.photo_paths = paths;
         var row = {
           id: n.id, day_key: n.day_key, author: n.author || state.author || 'Traveller',
-          user_id: state.uid, body: n.body || '', photo_paths: paths,
-          captured_at: n.captured_at, updated_at: nowISO()
+          user_id: state.uid, lang: n.lang || 'en',
+          body: n.body || '', body_en: n.body_en || '', body_it: n.body_it || '',
+          photo_paths: paths, captured_at: n.captured_at, updated_at: nowISO()
         };
         return state.sb.from('travel_notes').upsert(row).then(function (res) {
           if (res.error) throw res.error;
           n.synced = true; n.pending_op = null; n.user_id = state.uid;
-          return putNote(n);
+          return putNote(n).then(function () {
+            // Ask the Edge Function to fill the other language. Fire-and-forget:
+            // if it isn't deployed yet this just no-ops, and the translated text
+            // shows up on the next fetchRemote once it lands.
+            if (row.body) {
+              return state.sb.functions.invoke('translate-note', { body: { id: n.id } })
+                .catch(function () {});
+            }
+          });
         });
       });
     });
@@ -225,39 +205,25 @@
         var chain = Promise.resolve();
         pending.forEach(function (n) {
           chain = chain.then(function () {
-            return syncNote(n).then(function () { noteOK(n.id); })
-              .catch(function () { noteFailed(n.id); });
+            return syncNote(n).then(function () { noteOK(n.id); }).catch(function () { noteFailed(n.id); });
           });
         });
         return chain;
       });
-    }).then(function () {
-      return fetchRemote();
-    }).catch(function () {}).then(function () {
-      state.syncing = false;
-      renderAll();
-    });
+    }).then(function () { return fetchRemote(); })
+      .catch(function () {}).then(function () { state.syncing = false; renderAll(); });
   }
 
   // ---------------------------------------------------------------- rendering
-  function myNote(n) {
-    // Local-store notes are always mine; remote notes match on user_id.
-    return n._local || (state.uid && n.user_id === state.uid);
-  }
+  function myNote(n) { return n._local || (state.uid && n.user_id === state.uid); }
 
   function mergedForDay(dayKey, localNotes) {
     var map = {};
-    state.remote.forEach(function (n) {
-      if (n.day_key === dayKey) map[n.id] = n;
-    });
+    state.remote.forEach(function (n) { if (n.day_key === dayKey) map[n.id] = n; });
     localNotes.forEach(function (n) {
       if (n.day_key !== dayKey) return;
       if (n.pending_op === 'delete') { delete map[n.id]; return; }
-      // local copy wins (holds pending edits / offline-only notes)
-      var m = Object.assign({}, n);
-      m._local = true;
-      m._pending = !n.synced;
-      map[n.id] = m;
+      var m = Object.assign({}, n); m._local = true; m._pending = !n.synced; map[n.id] = m;
     });
     var list = Object.keys(map).map(function (k) { return map[k]; });
     list.sort(function (a, b) {
@@ -268,20 +234,18 @@
   }
 
   function photoHTML(n) {
-    // Prefer public URLs (remote); fall back to local blob for offline own-notes.
     var out = '';
     (n.photo_paths || []).forEach(function (p) {
       var url = publicUrl(p);
-      if (url) out += '<img loading="lazy" src="' + esc(url) + '" data-full="' + esc(url) + '" alt="note photo">';
+      if (url) out += '<img loading="lazy" src="' + esc(url) + '" data-full="' + esc(url) + '" alt="">';
     });
     return out;
   }
-
   function localPhotoHTML(photos) {
     var out = '';
     (photos || []).forEach(function (p) {
       var url = URL.createObjectURL(p.blob);
-      out += '<img src="' + url + '" data-full="' + url + '" alt="note photo">';
+      out += '<img src="' + url + '" data-full="' + url + '" alt="">';
     });
     return out;
   }
@@ -290,107 +254,86 @@
     var dayKey = dayEl.dataset.date;
     var listEl = dayEl.querySelector('.note-list');
     if (!listEl) return;
-
     allNotes().then(function (locals) {
       var list = mergedForDay(dayKey, locals);
-      var localById = {};
-      locals.forEach(function (n) { localById[n.id] = n; });
-
       if (!list.length) {
-        listEl.innerHTML = '<div class="note-empty">No notes yet' +
-          (MODE === 'poster' ? ' — tap “Add note”.' : '.') + '</div>';
+        listEl.innerHTML = '<div class="note-empty">' +
+          t(MODE === 'poster' ? 'empty_poster' : 'empty_reader') + '</div>';
         return;
       }
-
       var html = list.map(function (n) {
         var mine = myNote(n);
+        var body = pickBody(n);
         var badges = '';
-        if (n._pending) badges += '<span class="note-badge pending">Pending sync</span>';
-        else if (MODE === 'poster' && mine) badges += '<span class="note-badge mine">You</span>';
-
-        // photos: local blobs for own offline notes, else public URLs
-        var photos = '';
-        if (n._local && localById[n.id]) {
-          // will be filled async below; placeholder container
-        }
-        photos = photoHTML(n);
-
+        if (n._pending) badges += '<span class="note-badge pending">' + esc(t('badge_pending')) + '</span>';
+        else if (MODE === 'poster' && mine) badges += '<span class="note-badge mine">' + esc(t('badge_you')) + '</span>';
+        if (body.translated) badges += '<span class="note-badge tr">' + esc(t('translated_from')) + '</span>';
         var actions = '';
         if (MODE === 'poster' && mine) {
           actions = '<div class="note-actions">' +
-            '<button class="edit" data-edit="' + esc(n.id) + '">Edit</button>' +
-            '<button class="del" data-del="' + esc(n.id) + '">Delete</button></div>';
+            '<button class="edit" data-edit="' + esc(n.id) + '">' + esc(t('edit')) + '</button>' +
+            '<button class="del" data-del="' + esc(n.id) + '">' + esc(t('del')) + '</button></div>';
         }
         return '<div class="note-card" data-note="' + esc(n.id) + '">' +
           '<div class="note-meta"><span class="note-author">' + esc(n.author || 'Traveller') + '</span>' +
           '<span class="note-time">' + esc(fmtTime(n.captured_at)) + '</span>' + badges + '</div>' +
-          (n.body ? '<div class="note-body">' + esc(n.body) + '</div>' : '') +
-          (photos ? '<div class="note-photos">' + photos + '</div>' : '') +
+          (body.text ? '<div class="note-body">' + esc(body.text) + '</div>' : '') +
+          (photoHTML(n) ? '<div class="note-photos">' + photoHTML(n) + '</div>' : '') +
           actions + '</div>';
       }).join('');
       listEl.innerHTML = html;
 
-      // For own local (unsynced) notes without public URLs, swap in local blobs.
+      // own offline entries with no public URL yet: show local blobs
       list.forEach(function (n) {
         if (!n._local) return;
         var card = listEl.querySelector('[data-note="' + cssEsc(n.id) + '"]');
         if (!card) return;
-        var hasRemote = (n.photo_paths || []).length && publicUrl((n.photo_paths || [])[0]);
-        if (hasRemote) return;
+        if ((n.photo_paths || []).length && publicUrl((n.photo_paths || [])[0])) return;
         photosFor(n.id).then(function (ps) {
           if (!ps.length) return;
           var wrap = card.querySelector('.note-photos');
-          if (!wrap) {
-            wrap = document.createElement('div');
-            wrap.className = 'note-photos';
-            card.appendChild(wrap);
-          }
+          if (!wrap) { wrap = document.createElement('div'); wrap.className = 'note-photos'; card.appendChild(wrap); }
           wrap.innerHTML = localPhotoHTML(ps);
         });
       });
     });
   }
 
-  function cssEsc(s) { return String(s).replace(/"/g, '\\"'); }
-
-  function renderAll() {
-    document.querySelectorAll('.day').forEach(renderDay);
-    updateSyncStatus();
-  }
+  function renderAll() { document.querySelectorAll('.day').forEach(renderDay); updateSyncStatus(); }
 
   // ---------------------------------------------------------------- capture UI
   function buildDayUI(dayEl) {
+    if (dayEl.querySelector('.notes')) return; // already mounted for this render
     var dayKey = dayEl.dataset.date;
     var wrap = document.createElement('div');
     wrap.className = 'notes';
-    var head = MODE === 'poster'
-      ? '<div class="notes-head"><h4>Notes</h4>' +
-        '<button class="add-note-btn" type="button">+ Add note</button></div>'
-      : '<div class="notes-head"><h4>Notes</h4></div>';
-    wrap.innerHTML = head + '<div class="note-list"></div>';
+    wrap.innerHTML = MODE === 'poster'
+      ? '<div class="notes-head"><h4>' + esc(t('journal_title')) + '</h4>' +
+        '<button class="add-note-btn" type="button">' + esc(t('add_memory')) + '</button></div>' +
+        '<div class="note-list"></div>'
+      : '<div class="notes-head"><h4>' + esc(t('journal_title')) + '</h4></div>' +
+        '<div class="note-list"></div>';
     dayEl.appendChild(wrap);
-
     if (MODE === 'poster') {
-      wrap.querySelector('.add-note-btn').addEventListener('click', function () {
-        openForm(dayEl, dayKey, null);
-      });
+      wrap.querySelector('.add-note-btn').addEventListener('click', function () { openForm(dayEl, dayKey, null); });
     }
   }
 
   function openForm(dayEl, dayKey, editNote) {
     var notes = dayEl.querySelector('.notes');
-    if (notes.querySelector('.note-form')) return; // one at a time
-    var pending = []; // {file->blob, filename, url}
+    if (notes.querySelector('.note-form')) return;
+    var pending = [];
     var form = document.createElement('div');
     form.className = 'note-form';
+    var editText = '';
+    if (editNote) { var b = pickBody(editNote); editText = editNote.body || b.text || ''; }
     form.innerHTML =
-      '<textarea placeholder="Tap the keyboard mic and talk, or type…">' +
-      esc(editNote ? editNote.body : '') + '</textarea>' +
-      '<div class="hint">Tip: tap the 🎤 on your iPhone keyboard to dictate.</div>' +
+      '<textarea placeholder="' + esc(t('form_placeholder')) + '">' + esc(editText) + '</textarea>' +
+      '<div class="hint">' + esc(t('form_hint')) + '</div>' +
       '<div class="file-row"><input type="file" accept="image/*" multiple></div>' +
       '<div class="thumbs"></div>' +
-      '<div class="form-actions"><button class="save" type="button">Save note</button>' +
-      '<button class="cancel" type="button">Cancel</button></div>';
+      '<div class="form-actions"><button class="save" type="button">' + esc(t('save_memory')) + '</button>' +
+      '<button class="cancel" type="button">' + esc(t('cancel')) + '</button></div>';
     notes.insertBefore(form, notes.querySelector('.note-list'));
 
     var ta = form.querySelector('textarea');
@@ -398,47 +341,39 @@
     var thumbs = form.querySelector('.thumbs');
 
     fileInput.addEventListener('change', function () {
-      var files = Array.prototype.slice.call(fileInput.files || []);
-      fileInput.value = '';
+      var files = Array.prototype.slice.call(fileInput.files || []); fileInput.value = '';
       files.forEach(function (f) {
         shrink(f).then(function (blob) {
-          var filename = uuid() + '.jpg';
-          var url = URL.createObjectURL(blob);
+          var filename = uuid() + '.jpg', url = URL.createObjectURL(blob);
           pending.push({ blob: blob, filename: filename, url: url });
-          var img = document.createElement('img');
-          img.src = url;
-          thumbs.appendChild(img);
+          var img = document.createElement('img'); img.src = url; thumbs.appendChild(img);
         });
       });
     });
-
-    form.querySelector('.cancel').addEventListener('click', function () {
-      form.remove();
-    });
-
+    form.querySelector('.cancel').addEventListener('click', function () { form.remove(); });
     form.querySelector('.save').addEventListener('click', function () {
       var body = ta.value.trim();
-      if (!body && !pending.length && !(editNote && (editNote.photo_paths || []).length)) {
-        ta.focus(); return;
-      }
+      if (!body && !pending.length && !(editNote && (editNote.photo_paths || []).length)) { ta.focus(); return; }
       saveNote(dayKey, editNote, body, pending).then(function () {
-        form.remove();
-        renderDay(dayEl);
-        scheduleSync();
+        form.remove(); renderDay(dayEl); scheduleSync();
       });
     });
-
     ta.focus();
   }
 
   function saveNote(dayKey, editNote, body, pendingPhotos) {
     var id = editNote ? editNote.id : uuid();
+    var L = lang();
     var base = editNote || {
-      id: id, day_key: dayKey, author: state.author || 'Traveller',
-      user_id: state.uid || null, body: '', photo_paths: [],
-      captured_at: nowISO(), created_at: nowISO()
+      id: id, day_key: dayKey, author: state.author || 'Traveller', user_id: state.uid || null,
+      photo_paths: [], captured_at: nowISO(), created_at: nowISO()
     };
+    // Author's words go in their own language column; reset the other so the
+    // server re-translates. `body` keeps the original for fallback display.
+    base.lang = L;
     base.body = body;
+    base.body_en = L === 'en' ? body : '';
+    base.body_it = L === 'it' ? body : '';
     base.updated_at = nowISO();
     base.synced = false;
     base.pending_op = editNote ? 'update' : 'create';
@@ -448,8 +383,7 @@
       var chain = Promise.resolve();
       pendingPhotos.forEach(function (p) {
         chain = chain.then(function () {
-          return putPhoto({ id: uuid(), note_id: id, blob: p.blob,
-            filename: p.filename, uploaded: false });
+          return putPhoto({ id: uuid(), note_id: id, blob: p.blob, filename: p.filename, uploaded: false });
         });
       });
       return chain;
@@ -460,31 +394,24 @@
     return allNotes().then(function (notes) {
       var n = notes.filter(function (x) { return x.id === id; })[0];
       if (!n) {
-        // remote-only own note not in local store yet — stage a delete row
         var remote = state.remote.filter(function (x) { return x.id === id; })[0];
         if (!remote) return;
         n = Object.assign({}, remote);
       }
-      n.pending_op = 'delete';
-      n.synced = false;
-      n._local = true;
+      n.pending_op = 'delete'; n.synced = false; n._local = true;
       return putNote(n);
     });
   }
 
-  // Delegated clicks for edit / delete / lightbox
   function wireDelegation() {
     document.addEventListener('click', function (e) {
       var full = e.target.closest('.note-photos img, .note-form .thumbs img');
       if (full && full.dataset.full) { lightbox(full.dataset.full); return; }
-
       var del = e.target.closest('[data-del]');
       if (del) {
-        if (!confirm('Delete this note? This removes its photos too.')) return;
+        if (!confirm(t('confirm_delete'))) return;
         var dayEl = del.closest('.day');
-        deleteNote(del.dataset.del).then(function () {
-          renderDay(dayEl); scheduleSync();
-        });
+        deleteNote(del.dataset.del).then(function () { renderDay(dayEl); scheduleSync(); });
         return;
       }
       var edit = e.target.closest('[data-edit]');
@@ -492,10 +419,7 @@
         var dEl = edit.closest('.day');
         allNotes().then(function (notes) {
           var n = notes.filter(function (x) { return x.id === edit.dataset.edit; })[0];
-          if (!n) {
-            var r = state.remote.filter(function (x) { return x.id === edit.dataset.edit; })[0];
-            n = r ? Object.assign({ _local: true }, r) : null;
-          }
+          if (!n) { var r = state.remote.filter(function (x) { return x.id === edit.dataset.edit; })[0]; n = r ? Object.assign({ _local: true }, r) : null; }
           if (n) openForm(dEl, n.day_key, n);
         });
       }
@@ -505,7 +429,7 @@
   function lightbox(url) {
     var lb = document.createElement('div');
     lb.className = 'lightbox';
-    lb.innerHTML = '<img src="' + esc(url) + '" alt="photo">';
+    lb.innerHTML = '<img src="' + esc(url) + '" alt="">';
     lb.addEventListener('click', function () { lb.remove(); });
     document.body.appendChild(lb);
   }
@@ -516,28 +440,25 @@
     var modal = document.createElement('div');
     modal.className = 'name-modal';
     modal.innerHTML =
-      '<div class="box"><h3>Who’s writing?</h3>' +
-      '<p>Your name goes on each note. You can change it later by clearing site data.</p>' +
+      '<div class="box"><h3>' + esc(t('name_title')) + '</h3>' +
+      '<p>' + esc(t('name_desc')) + '</p>' +
       '<div class="names">' +
       '<button data-name="Marco">Marco</button>' +
       '<button data-name="Giulia">Giulia</button>' +
       '<button data-name="Vittoria">Vittoria</button>' +
       '<button data-name="Luca">Luca</button></div>' +
-      '<input type="text" placeholder="…or type a name" maxlength="40">' +
-      '<button class="save" type="button">Save</button></div>';
+      '<input type="text" placeholder="' + esc(t('name_ph')) + '" maxlength="40">' +
+      '<button class="save" type="button">' + esc(t('name_save')) + '</button></div>';
     document.body.appendChild(modal);
     var input = modal.querySelector('input');
-    function set(name) {
-      name = (name || '').trim();
-      if (!name) { input.focus(); return; }
-      state.author = name;
-      localStorage.setItem('travel_author', name);
-      modal.remove();
+    function setName(name) {
+      name = (name || '').trim(); if (!name) { input.focus(); return; }
+      state.author = name; localStorage.setItem('travel_author', name); modal.remove();
     }
     modal.querySelectorAll('.names button').forEach(function (b) {
-      b.addEventListener('click', function () { set(b.dataset.name); });
+      b.addEventListener('click', function () { setName(b.dataset.name); });
     });
-    modal.querySelector('.save').addEventListener('click', function () { set(input.value); });
+    modal.querySelector('.save').addEventListener('click', function () { setName(input.value); });
   }
 
   // ---------------------------------------------------------------- sync status
@@ -548,41 +469,41 @@
       var pend = notes.filter(function (n) { return !n.synced && n.pending_op; }).length;
       el.className = 'sync-status';
       var label;
-      if (!navigator.onLine) { el.classList.add('offline'); label = 'Offline'; }
-      else if (pend) { el.classList.add('pending'); label = 'Syncing ' + pend + '…'; }
-      else { label = 'Synced'; }
-      if (!CONFIGURED) label = 'Local only';
-      el.innerHTML = '<span class="dot"></span>' + label;
+      if (!CONFIGURED) label = t('sync_local');
+      else if (!navigator.onLine) { el.classList.add('offline'); label = t('sync_offline'); }
+      else if (pend) { el.classList.add('pending'); label = t('sync_syncing', { n: pend }); }
+      else label = t('sync_synced');
+      el.innerHTML = '<span class="dot"></span>' + esc(label);
     });
   }
 
   // ---------------------------------------------------------------- boot
-  var syncTimer = null;
   function scheduleSync() { updateSyncStatus(); syncNow(); }
 
-  function boot() {
+  function mount() {
     document.querySelectorAll('.day').forEach(buildDayUI);
+    renderAll();
+  }
+
+  function initOnce() {
+    if (state.booted) return;
+    state.booted = true;
     wireDelegation();
     initSupabase();
-
     if (MODE === 'poster') {
       promptName();
       ensureAuth().then(function () { renderAll(); syncNow(); });
       window.addEventListener('online', syncNow);
       window.addEventListener('offline', updateSyncStatus);
-      syncTimer = setInterval(function () {
-        if (navigator.onLine) syncNow();
-      }, 20000);
+      setInterval(function () { if (navigator.onLine) syncNow(); }, 20000);
     } else {
-      // reader: display only, never signs in
-      renderAll();
       if (navigator.onLine) fetchRemote();
       window.addEventListener('online', fetchRemote);
       setInterval(function () { if (navigator.onLine) fetchRemote(); }, 60000);
     }
-    renderAll();
   }
 
-  if (document.querySelector('.day')) boot();
-  else document.addEventListener('itinerary:ready', boot, { once: true });
+  // Re-fired on every itinerary (re)render, including language switches.
+  document.addEventListener('itinerary:ready', function () { mount(); initOnce(); });
+  if (document.querySelector('.day')) { mount(); initOnce(); }
 })();
