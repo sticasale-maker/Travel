@@ -36,6 +36,22 @@ alter table public.travel_notes
 alter table public.travel_notes
   add column if not exists audio_path text default '';
 
+-- Shared people roster (name + avatar) so each phone shows everyone and each
+-- person can pick themselves. id is the client-generated personId.
+create table if not exists public.people (
+  id          text primary key,
+  name        text not null,
+  avatar_path text default '',
+  updated_at  timestamptz not null default now()
+);
+alter table public.people enable row level security;
+drop policy if exists "people read" on public.people;
+create policy "people read" on public.people for select using (true);
+drop policy if exists "people add"  on public.people;
+create policy "people add"  on public.people for insert with check (true);
+drop policy if exists "people edit" on public.people;
+create policy "people edit" on public.people for update using (true) with check (true);
+
 -- Reactions (❤️ 😂 🔥 👏) — anyone with the link can react (family or relatives).
 create table if not exists public.reactions (
   id         uuid primary key default gen_random_uuid(),

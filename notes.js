@@ -284,6 +284,39 @@
       .then(function () {}).catch(function () {});
   }
 
+  // Shared people roster: push this phone's people so other phones can see them.
+  function syncPeople() {
+    if (!state.sb || !state.uid) return Promise.resolve();
+    var people = loadPeople(); if (!people.length) return Promise.resolve();
+    var rows = people.map(function (p) { return { id: p.id, name: p.name, avatar_path: p.avatarPath || '', updated_at: nowISO() }; });
+    return state.sb.from('people').upsert(rows).then(function () {}).catch(function () {});
+  }
+  // Pull the shared roster and merge into this phone's list (so a fresh phone
+  // shows everyone). Keeps a local photo if one was set on this device.
+  function fetchPeople() {
+    if (!state.sb) return Promise.resolve();
+    return state.sb.from('people').select('*').then(function (res) {
+      if (res.error || !res.data) return;
+      var local = loadPeople(), byId = {}, changed = false;
+      local.forEach(function (p) { byId[p.id] = p; });
+      res.data.forEach(function (sp) {
+        var lp = byId[sp.id];
+        if (lp) {
+          if (lp.name !== sp.name) { lp.name = sp.name; changed = true; }
+          if (!lp.avatarData && (lp.avatarPath || '') !== (sp.avatar_path || '')) { lp.avatarPath = sp.avatar_path || ''; changed = true; }
+        } else {
+          local.push({ id: sp.id, name: sp.name, avatarData: '', avatarPath: sp.avatar_path || '' }); changed = true;
+        }
+      });
+      if (changed) { savePeople(local); renderProfileChip(); }
+    }).catch(function () {});
+  }
+  // On a phone that has the roster but no one picked yet, ask who they are.
+  function maybePromptIdentity() {
+    if (MODE !== 'poster') return;
+    if (!activeId() && loadPeople().length) openSwitcher();
+  }
+
   // Upload each person's avatar that isn't uploaded yet; record its storage path.
   function uploadAvatars() {
     if (!state.sb || !state.uid) return Promise.resolve();
@@ -408,7 +441,7 @@
     state.syncing = true;
     return ensureAuth().then(function () {
       if (!state.uid) return;
-      return uploadAvatars().then(propagateAvatars).then(syncProfiles).then(function () {
+      return uploadAvatars().then(propagateAvatars).then(syncProfiles).then(syncPeople).then(function () {
         return allNotes().then(function (notes) {
           var pending = notes.filter(function (n) { return !n.synced && n.pending_op; })
             .filter(function (n) { return backoffReady(n.id); })
@@ -420,7 +453,7 @@
           return chain;
         });
       });
-    }).then(function () { return Promise.all([fetchRemote(), fetchProfiles(), fetchSocial()]); })
+    }).then(function () { return Promise.all([fetchRemote(), fetchProfiles(), fetchSocial(), fetchPeople()]); })
       .catch(function () {}).then(function () { state.syncing = false; renderAll(); });
   }
 
@@ -833,7 +866,7 @@
     if (MODE === 'poster') {
       // don't block the view with a setup modal — the journal is readable
       // straight away; we prompt for a profile only when someone taps "Add a memory".
-      ensureAuth().then(function () { fetchProfiles(); renderAll(); syncNow(); });
+      ensureAuth().then(function () { fetchProfiles(); fetchPeople().then(maybePromptIdentity); renderAll(); syncNow(); });
       window.addEventListener('online', syncNow);
       window.addEventListener('offline', updateSyncStatus);
       setInterval(function () { if (navigator.onLine) syncNow(); }, 20000);
