@@ -43,7 +43,8 @@
     camp: '<path d="M12 4 3 20h18L12 4zM12 4v16"/>',
     check: '<path d="M4 12l5 5L20 6"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5l3 2"/>',
-    pin: '<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'
+    pin: '<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+    signal: '<path d="M4 20v-3M9 20v-6M14 20v-10M19 20v-14"/>'
   };
   function icon(k, cls) {
     return '<svg class="ei' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -59,6 +60,37 @@
     camp: ['Camp night', 'Notte in tenda'], eat: ['Eat & drink', 'Mangiare e bere']
   };
   function catLabel(c) { var l = CAT_LABEL[c]; return l ? (it() ? l[1] : l[0]) : c; }
+
+  // ---- light localization of hours / price strings (times stay universal) --
+  var DAY_IT = { Mon: 'Lun', Tue: 'Mar', Wed: 'Mer', Thu: 'Gio', Fri: 'Ven', Sat: 'Sab', Sun: 'Dom' };
+  function localizeHours(s) {
+    if (!it() || !s) return s;
+    return s.replace(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/g, function (m) { return DAY_IT[m]; })
+      .replace(/\bDaily\b/g, 'Tutti i giorni').replace(/\b24\/7\b/g, 'Sempre aperto')
+      .replace(/\bBy booking\b/g, 'Su prenotazione').replace(/\bTours\b/g, 'Visite')
+      .replace(/\bfee\b/g, 'a pagamento').replace(/\bPH\b/g, 'festivi').replace(/\blate\b/g, 'tardi');
+  }
+  function localizePrice(s) {
+    if (!it() || !s) return s;
+    return s.replace(/\bmains\b/g, 'piatti').replace(/\blight meals\b/g, 'piatti leggeri')
+      .replace(/\bcounter meals\b/g, 'piatti al banco').replace(/\bsnacks\b/g, 'spuntini');
+  }
+  var COV_LVL = { good: ['Good', 'Buono'], patchy: ['Patchy', 'A tratti'], none: ['No signal', 'Assente'] };
+  function coverageHTML(c) {
+    if (!c) return '';
+    function badge(carrier, who, lvl) {
+      var L = COV_LVL[lvl] || ['', ''];
+      return '<span class="cov-item cov-' + lvl + '"><b>' + carrier + '</b> · ' + esc(who) +
+        ' <span class="cov-lvl">' + (it() ? L[1] : L[0]) + '</span></span>';
+    }
+    return '<div class="coverage">' + icon('signal', 'cov-ic') +
+      badge('Telstra', 'Marco', c.telstra) +
+      badge('Optus', 'Giulia & Vittoria', c.optus) +
+      (c.note ? '<span class="cov-note">' + esc(c.note) + '</span>' : '') + '</div>';
+  }
+  function hoursHTML(h) {
+    return h ? '<span class="ti-hours">' + icon('clock') + esc(localizeHours(h)) + '</span>' : '';
+  }
 
   // ---- star rating --------------------------------------------------------
   function rating(r) {
@@ -172,8 +204,8 @@
       return '<li class="todo-item"><span class="ti-ic">' + icon(x.cat) + '</span>' +
         '<div class="ti-main"><span class="ti-name">' + esc(x.name) + '</span>' +
         (x.dur ? '<span class="ti-dur">' + icon('clock') + esc(x.dur) + '</span>' : '') +
-        '<span class="ti-blurb">' + esc(it() ? x.it : x.en) + '</span></div>' +
-        '<span class="flag" data-flag="' + esc(id) + '">' +
+        '<span class="ti-blurb">' + esc(it() ? x.it : x.en) + '</span>' + hoursHTML(x.hours) + '</div>' +
+        '<span class="flag-yn" data-flag="' + esc(id) + '">' +
           '<button type="button" class="flag-btn yes" data-val="yes">' + esc(t('flag_yes')) + '</button>' +
           '<button type="button" class="flag-btn no" data-val="no">' + esc(t('flag_no')) + '</button>' +
         '</span>' +
@@ -187,7 +219,8 @@
   function foodRow(f) {
     return '<li class="food-item"><span class="fi-ic">' + icon(KIND_IC[f.kind] || 'eat') + '</span>' +
       '<div class="fi-main"><span class="fi-name">' + esc(f.name) + '</span> ' + rating(f.rating) +
-      '<span class="fi-blurb">' + esc(it() ? f.it : f.en) + '</span></div>' +
+      (f.avg ? ' <span class="fi-price">' + esc(localizePrice(f.avg)) + '</span>' : '') +
+      '<span class="fi-blurb">' + esc(it() ? f.it : f.en) + '</span>' + hoursHTML(f.hours) + '</div>' +
       (f.q ? '<a class="ti-map" target="_blank" rel="noopener" href="' + mapUrl(f.q) + '" aria-label="Map">' + icon('pin') + '</a>' : '') +
       '</li>';
   }
@@ -202,7 +235,7 @@
     if (route.length) {
       body += '<h5>' + esc(t('food_route')) + '</h5><ul class="food-list">' +
         route.map(function (f) {
-          return foodRow({ kind: f.kind, name: f.name, rating: f.rating, q: f.q,
+          return foodRow({ kind: f.kind, name: f.name, rating: f.rating, q: f.q, avg: f.avg, hours: f.hours,
             en: f.en + ' — ' + f.where, it: f.it + ' — ' + f.where });
         }).join('') + '</ul>';
     }
@@ -232,6 +265,7 @@
       if (d.photo) html += photoHTML(d.photo);
       if (d.warn) html += warnHTML(d.warn);
       html += highlightsHTML(d, day.classList.contains('camp'));
+      if (d.coverage) html += coverageHTML(d.coverage);
       if (d.link) html += linkHTML(d.link);
       if (d.todo && d.todo.length) html += todoHTML(day.dataset.date, d.todo);
       if (d.food && d.food.length) html += foodHTML(d.food);
