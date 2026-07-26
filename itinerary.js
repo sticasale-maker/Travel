@@ -11,7 +11,7 @@
     var bText = document.getElementById('banner-text');
     var jump = document.getElementById('jump');
     var today = new Date(); today.setHours(0, 0, 0, 0);
-    var start = new Date('2026-08-01T00:00:00');
+    var start = new Date('2026-07-31T00:00:00');
     var end = new Date('2026-08-13T00:00:00');
     var focusEl = null, focusNum = 0;
 

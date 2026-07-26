@@ -39,7 +39,8 @@
 
   // --- the day legs: [lat, lng, "Maps place name"] -------------------------
   var LEGS = {
-    '2026-08-01': { from: [-33.75,151.29,'Dee Why NSW'],        to: [-31.50,145.84,'Cobar NSW'] },
+    '2026-07-31': { from: [-33.75,151.29,'Dee Why NSW'],        to: [-32.24,148.60,'Dubbo NSW'] },
+    '2026-08-01': { from: [-32.24,148.60,'Dubbo NSW'],          to: [-31.50,145.84,'Cobar NSW'] },
     '2026-08-02': { from: [-31.50,145.84,'Cobar NSW'],          to: [-31.96,141.47,'Broken Hill NSW'] },
     '2026-08-03': { from: [-31.96,141.47,'Broken Hill NSW'],    to: [-31.90,141.22,'Silverton NSW'], daytrip: true },
     '2026-08-04': { from: [-31.96,141.47,'Broken Hill NSW'],    to: [-31.24,136.79,'Pimba SA'] },

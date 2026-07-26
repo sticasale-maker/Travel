@@ -7,6 +7,8 @@
 
   // Each: paths (24x24, stroke style) + a tooltip in en/it.
   var F = {
+    '2026-07-31': { en: 'Open-range zoo', it: 'Zoo safari in auto',
+      d: '<ellipse cx="12" cy="15" rx="3.6" ry="3"/><circle cx="6.6" cy="11" r="1.6"/><circle cx="10" cy="7.6" r="1.6"/><circle cx="14" cy="7.6" r="1.6"/><circle cx="17.4" cy="11" r="1.6"/>' },
     '2026-08-01': { en: 'Copper-mining town', it: 'Città mineraria del rame',
       d: '<path d="M4 12h15l-1.5 5H5.5L4 12z"/><path d="M7 12l-1-3H4"/><circle cx="8" cy="20" r="1.3"/><circle cx="15.5" cy="20" r="1.3"/>' },
     '2026-08-02': { en: 'Silver-mining city', it: 'Città mineraria d’argento',
