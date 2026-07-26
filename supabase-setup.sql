@@ -163,6 +163,30 @@ create policy "delete own travel-photos" on storage.objects
   using ( bucket_id = 'travel-photos'
           and (storage.foldername(name))[1] = auth.uid()::text );
 
+-- ---------------------------------------------------------------------------
+-- Shared "things to do" Yes/No flags — one checklist the whole family shares.
+-- Anyone with the link can set them (like reactions/people). item_id is
+-- '{day-key}:{item-id}', e.g. '2026-08-02:living-desert'.
+-- ---------------------------------------------------------------------------
+create table if not exists public.trip_flags (
+  item_id    text primary key,
+  value      text not null default '',        -- 'yes' | 'no' | '' (cleared)
+  set_by     text default '',
+  updated_at timestamptz not null default now()
+);
+alter table public.trip_flags enable row level security;
+drop policy if exists "flags read" on public.trip_flags;
+create policy "flags read" on public.trip_flags for select using (true);
+drop policy if exists "flags add"  on public.trip_flags;
+create policy "flags add"  on public.trip_flags for insert with check (true);
+drop policy if exists "flags edit" on public.trip_flags;
+create policy "flags edit" on public.trip_flags for update using (true) with check (true);
+
+-- Live sync across phones (idempotent — ignore if the table is already added):
+do $$ begin
+  alter publication supabase_realtime add table public.trip_flags;
+exception when others then null; end $$;
+
 -- ============================================================================
 -- STILL TO DO in the dashboard (not SQL):
 --   Authentication → Providers (or Sign In / Providers) → enable

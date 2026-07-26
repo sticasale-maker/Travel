@@ -1,0 +1,251 @@
+/* enrich.js — per-day enrichment layer over the itinerary cards:
+   • a destination photo (Wikimedia, cached offline by the service worker once seen)
+   • a compact highlights strip of category icons
+   • a collapsible "Things to do" checklist, each item flaggable Yes/No
+     (flags sync across phones via Supabase, with a localStorage fallback + offline queue)
+   • a collapsible "Eat & drink" list with star ratings, at the stop and along the way
+   Keyed by data-date so it works in both the English and Italian partials.
+   Runs on every itinerary (re)render (incl. language switches). */
+(function () {
+  'use strict';
+  var I18N = window.I18N;
+  function t(k, v) { return I18N ? I18N.t(k, v) : k; }
+  function it() { return I18N && I18N.lang === 'it'; }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function mapUrl(q) {
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+  }
+
+  // ---- category / kind icons (inner SVG markup, stroke style) --------------
+  var IC = {
+    walk: '<path d="M4 20h4l2-6 2 2 1 4h3M9 6.5a1.4 1.4 0 1 0 0-.01M8 14l2-5 3 1 2 3"/>',
+    swim: '<path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><circle cx="15" cy="6.5" r="1.6"/><path d="M6 12l4-3 4 2"/>',
+    lookout: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/>',
+    wildlife: '<ellipse cx="12" cy="15" rx="3.6" ry="3"/><circle cx="6.6" cy="11" r="1.6"/><circle cx="10" cy="7.6" r="1.6"/><circle cx="14" cy="7.6" r="1.6"/><circle cx="17.4" cy="11" r="1.6"/>',
+    heritage: '<path d="M4 9h16M5 9l7-4 7 4M6 9v8M10 9v8M14 9v8M18 9v8M4 20h16"/>',
+    mine: '<path d="M4 20l8-8M6 10c4-4 9-5 14-3M18 5c-2 4-4 6-8 8"/>',
+    drive: '<path d="M5 13l1.4-4.2A2 2 0 0 1 8.3 7.4h7.4a2 2 0 0 1 1.9 1.4L19 13M5 13h14v4H5zM7 17v1.5M17 17v1.5"/><circle cx="7.5" cy="14.6" r="1"/><circle cx="16.5" cy="14.6" r="1"/>',
+    garden: '<path d="M12 21v-8M12 13c-3 .3-5.5-1.6-5.8-4.4C9 8.3 11.5 10 12 13zM12 12c.4-3 2.8-4.7 5.8-4.4C17.6 10.4 15.1 12.4 12 12z"/>',
+    art: '<path d="M12 3a9 9 0 0 0 0 18c1.4 0 2-.9 2-2 0-1.4 1-2 2-2h1a4 4 0 0 0 4-4c0-5-4-8-9-8z"/><circle cx="8" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16" cy="11" r="1"/>',
+    church: '<path d="M12 3v6M9.5 6h5M6 21V11l6-4 6 4v10M4 21h16M10.5 21v-4h3v4"/>',
+    star: '<path d="M12 3.2l2.5 5.4 5.9.6-4.4 4 1.2 5.8L12 16.9 6.8 19l1.2-5.8-4.4-4 5.9-.6z"/>',
+    science: '<path d="M12 2c2.6 2 4 5 4 8.5 0 1.8-.6 3.3-1.4 4.5H9.4C8.6 13.8 8 12.3 8 10.5 8 7 9.4 4 12 2z"/><circle cx="12" cy="9" r="1.5"/><path d="M9.4 15l-2.4 3 3-1.2M14.6 15l2.4 3-3-1.2M10.5 18.6h3"/>',
+    eat: '<path d="M6 3v7a2 2 0 0 0 4 0V3M8 10v11M16 3c-1.6 0-2.5 2-2.5 5s1 4 2.5 4v9"/>',
+    cafe: '<path d="M4 8h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8zM17 9h2a2 2 0 0 1 0 4h-2M7 3v2M10 3v2M13 3v2"/>',
+    pub: '<path d="M6 8h9v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V8zM15 10h3a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-3M6 8V6a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v2"/>',
+    bakery: '<path d="M5 11a4 4 0 0 1 4-4h6a4 4 0 0 1 0 8H9a4 4 0 0 1-4-4zM9 7.5v7M13 7.5v7"/>',
+    roadhouse: '<path d="M5 21V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v15M4 21h11M7 8h4M13 9.5l3 2.5V17a1.5 1.5 0 0 0 3 0V7.5L16.5 5"/>',
+    station: '<path d="M4 11l8-6 8 6M6 10v10h12V10M10 20v-5h4v5"/>',
+    camp: '<path d="M12 4 3 20h18L12 4zM12 4v16"/>',
+    check: '<path d="M4 12l5 5L20 6"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5l3 2"/>',
+    pin: '<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'
+  };
+  function icon(k, cls) {
+    return '<svg class="ei' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      (IC[k] || IC.star) + '</svg>';
+  }
+  var KIND_IC = { cafe: 'cafe', restaurant: 'eat', pub: 'pub', bakery: 'bakery', roadhouse: 'roadhouse', station: 'station' };
+  var CAT_LABEL = {
+    walk: ['Walk', 'Camminata'], swim: ['Swim', 'Nuoto'], lookout: ['Lookout', 'Belvedere'],
+    wildlife: ['Wildlife', 'Fauna'], heritage: ['Heritage', 'Storia'], mine: ['Mining', 'Miniera'],
+    drive: ['Scenic drive', 'Strada panoramica'], garden: ['Garden', 'Giardino'], art: ['Art & culture', 'Arte e cultura'],
+    church: ['Churches', 'Chiese'], star: ['Landmark', 'Simbolo'], science: ['Rocket range', 'Poligono'],
+    camp: ['Camp night', 'Notte in tenda'], eat: ['Eat & drink', 'Mangiare e bere']
+  };
+  function catLabel(c) { var l = CAT_LABEL[c]; return l ? (it() ? l[1] : l[0]) : c; }
+
+  // ---- star rating --------------------------------------------------------
+  function rating(r) {
+    var m = String(r || '').match(/(\d(?:\.\d)?)/);
+    if (!m) {
+      return r ? '<span class="rev">' + icon('star', 'rev-i') + esc(it() ? 'ben recensito' : 'well-reviewed') + '</span>' : '';
+    }
+    var v = parseFloat(m[1]), pct = Math.max(0, Math.min(100, v / 5 * 100));
+    return '<span class="stars" title="' + v + '/5" aria-label="' + v + ' out of 5">' +
+      '<span class="s-b">★★★★★</span>' +
+      '<span class="s-f" style="width:' + pct.toFixed(0) + '%">★★★★★</span>' +
+      '</span><span class="s-n">' + v.toFixed(1) + '</span>';
+  }
+
+  // ---- flag store (localStorage + Supabase sync) --------------------------
+  var LKEY = 'trip_flags_v1', PKEY = 'trip_flags_pending', sb = null;
+  function jload(k) { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (e) { return {}; } }
+  function jsave(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  var flags = jload(LKEY), pending = jload(PKEY);
+  function nowISO() { return new Date().toISOString(); }
+  function author() { try { return localStorage.getItem('travel_author') || ''; } catch (e) { return ''; } }
+  function flagOf(id) { return (flags[id] && flags[id].v) || ''; }
+
+  function mergeRow(r) {
+    if (!r || !r.item_id) return;
+    var cur = flags[r.item_id];
+    if (!cur || (r.updated_at || '') >= (cur.t || '')) {
+      flags[r.item_id] = { v: r.value || '', t: r.updated_at || nowISO(), by: r.set_by || '' };
+      jsave(LKEY, flags);
+    }
+  }
+  function pull() {
+    if (!sb) return;
+    sb.from('trip_flags').select('*').then(function (res) {
+      if (res && res.data) { res.data.forEach(mergeRow); paint(); }
+    }).catch(function () {});
+  }
+  function flush() {
+    if (!sb || !navigator.onLine) return;
+    Object.keys(pending).forEach(function (id) {
+      var f = flags[id];
+      if (!f) { delete pending[id]; return; }
+      sb.from('trip_flags').upsert({ item_id: id, value: f.v, set_by: f.by || author(), updated_at: f.t })
+        .then(function (res) { if (res && !res.error) { delete pending[id]; jsave(PKEY, pending); } })
+        .catch(function () {});
+    });
+  }
+  function setFlag(id, val) {
+    var nv = flagOf(id) === val ? '' : val;      // tap the active choice again to clear it
+    flags[id] = { v: nv, t: nowISO(), by: author() };
+    jsave(LKEY, flags);
+    pending[id] = 1; jsave(PKEY, pending);
+    paintItem(id);
+    flush();
+  }
+  function initSb() {
+    var CFG = window.TRAVEL_CONFIG || {};
+    if (!CFG.SUPABASE_URL || CFG.SUPABASE_URL.indexOf('YOUR-') > -1) return;
+    if (!window.supabase || !window.supabase.createClient) return;
+    try { sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { auth: { persistSession: false } }); }
+    catch (e) { return; }
+    pull(); flush();
+    try {
+      sb.channel('trip_flags')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_flags' },
+          function (p) { mergeRow(p.new || p.old); paint(); })
+        .subscribe();
+    } catch (e) {}
+  }
+  window.addEventListener('online', function () { flush(); pull(); });
+
+  function applyState(el) {
+    var v = flagOf(el.getAttribute('data-flag'));
+    el.querySelectorAll('.flag-btn').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-val') === v); });
+    var li = el.closest('.todo-item');
+    if (li) { li.classList.toggle('is-yes', v === 'yes'); li.classList.toggle('is-no', v === 'no'); }
+  }
+  function paint() { document.querySelectorAll('[data-flag]').forEach(applyState); }
+  function paintItem(id) {
+    document.querySelectorAll('[data-flag]').forEach(function (el) {
+      if (el.getAttribute('data-flag') === id) applyState(el);
+    });
+  }
+
+  // ---- render -------------------------------------------------------------
+  function photoHTML(p) {
+    var cap = esc(p.credit || '') + (p.license ? ' · ' + esc(p.license) : '');
+    return '<figure class="day-photo"><img loading="lazy" alt="' + esc(p.alt || '') + '" src="' + esc(p.url) + '">' +
+      (cap ? '<figcaption>' + cap + ' · Wikimedia</figcaption>' : '') + '</figure>';
+  }
+  function warnHTML(w) {
+    return '<p class="day-warn">⚠️ <span>' + esc(it() ? w.it : w.en) + '</span></p>';
+  }
+  function linkHTML(l) {
+    return '<a class="drive-link" target="_blank" rel="noopener" href="' + esc(l.url) + '">' +
+      icon('drive') + '<span>' + esc(it() ? l.it : l.en) + '</span>' + icon('pin', 'dl-go') + '</a>';
+  }
+  function highlightsHTML(d, isCamp) {
+    var cats = [];
+    (d.todo || []).forEach(function (x) { if (x.cat && cats.indexOf(x.cat) < 0) cats.push(x.cat); });
+    if (isCamp && cats.indexOf('camp') < 0) cats.push('camp');
+    cats = cats.slice(0, 6);
+    if (!cats.length) return '';
+    return '<div class="hl-strip">' + cats.map(function (c) {
+      return '<span class="hl" title="' + esc(catLabel(c)) + '">' + icon(c) + '</span>';
+    }).join('') + '</div>';
+  }
+  function todoHTML(date, list) {
+    var rows = list.map(function (x) {
+      var id = date + ':' + x.id;
+      return '<li class="todo-item"><span class="ti-ic">' + icon(x.cat) + '</span>' +
+        '<div class="ti-main"><span class="ti-name">' + esc(x.name) + '</span>' +
+        (x.dur ? '<span class="ti-dur">' + icon('clock') + esc(x.dur) + '</span>' : '') +
+        '<span class="ti-blurb">' + esc(it() ? x.it : x.en) + '</span></div>' +
+        '<span class="flag" data-flag="' + esc(id) + '">' +
+          '<button type="button" class="flag-btn yes" data-val="yes">' + esc(t('flag_yes')) + '</button>' +
+          '<button type="button" class="flag-btn no" data-val="no">' + esc(t('flag_no')) + '</button>' +
+        '</span>' +
+        (x.q ? '<a class="ti-map" target="_blank" rel="noopener" href="' + mapUrl(x.q) + '" aria-label="Map">' + icon('pin') + '</a>' : '') +
+        '</li>';
+    }).join('');
+    return '<details class="ex todo-ex"><summary>' + icon('check') + '<span>' + esc(t('todo_title')) +
+      '</span><span class="ex-count">' + list.length + '</span></summary>' +
+      '<ul class="todo-list">' + rows + '</ul></details>';
+  }
+  function foodRow(f) {
+    return '<li class="food-item"><span class="fi-ic">' + icon(KIND_IC[f.kind] || 'eat') + '</span>' +
+      '<div class="fi-main"><span class="fi-name">' + esc(f.name) + '</span> ' + rating(f.rating) +
+      '<span class="fi-blurb">' + esc(it() ? f.it : f.en) + '</span></div>' +
+      (f.q ? '<a class="ti-map" target="_blank" rel="noopener" href="' + mapUrl(f.q) + '" aria-label="Map">' + icon('pin') + '</a>' : '') +
+      '</li>';
+  }
+  function foodHTML(list) {
+    var at = list.filter(function (f) { return !f.where; });
+    var route = list.filter(function (f) { return f.where; });
+    var body = '';
+    if (at.length) {
+      body += (route.length ? '<h5>' + esc(t('food_at')) + '</h5>' : '') +
+        '<ul class="food-list">' + at.map(foodRow).join('') + '</ul>';
+    }
+    if (route.length) {
+      body += '<h5>' + esc(t('food_route')) + '</h5><ul class="food-list">' +
+        route.map(function (f) {
+          return foodRow({ kind: f.kind, name: f.name, rating: f.rating, q: f.q,
+            en: f.en + ' — ' + f.where, it: f.it + ' — ' + f.where });
+        }).join('') + '</ul>';
+    }
+    return '<details class="ex food-ex"><summary>' + icon('eat') + '<span>' + esc(t('food_title')) +
+      '</span><span class="ex-count">' + list.length + '</span></summary>' + body + '</details>';
+  }
+
+  function onClick(e) {
+    var b = e.target.closest ? e.target.closest('.flag-btn') : null;
+    if (b) {
+      e.preventDefault();
+      var w = b.closest('[data-flag]');
+      if (w) setFlag(w.getAttribute('data-flag'), b.getAttribute('data-val'));
+    }
+    e.stopPropagation();          // keep the day card's tap-to-focus from firing
+  }
+
+  function render() {
+    var DATA = window.TRIP_ENRICH || {};
+    document.querySelectorAll('.day').forEach(function (day) {
+      if (day.querySelector('.day-enrich')) return;
+      var d = DATA[day.dataset.date];
+      if (!d) return;
+      var el = document.createElement('div');
+      el.className = 'day-enrich';
+      var html = '';
+      if (d.photo) html += photoHTML(d.photo);
+      if (d.warn) html += warnHTML(d.warn);
+      html += highlightsHTML(d, day.classList.contains('camp'));
+      if (d.link) html += linkHTML(d.link);
+      if (d.todo && d.todo.length) html += todoHTML(day.dataset.date, d.todo);
+      if (d.food && d.food.length) html += foodHTML(d.food);
+      el.innerHTML = html;
+      var img = el.querySelector('.day-photo img');
+      if (img) img.addEventListener('error', function () { var f = img.closest('.day-photo'); if (f) f.style.display = 'none'; });
+      el.addEventListener('click', onClick);
+      var notes = day.querySelector('.notes');
+      if (notes) day.insertBefore(el, notes); else day.appendChild(el);
+    });
+    paint();
+  }
+
+  document.addEventListener('itinerary:ready', render);
+  if (window.TRIP_ENRICH && document.querySelector('.day')) render();
+  initSb();
+})();

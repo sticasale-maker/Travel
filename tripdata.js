@@ -23,6 +23,7 @@ window.TRIP_DATA = {
   origin: [-33.75, 151.29, 'Dee Why'],
   // milestones auto-unlock on/after their date
   milestones: [
+    { date: '2026-08-01', emoji: '🦒', en: 'Zoo safari at Dubbo',       it: 'Safari allo zoo di Dubbo' },
     { date: '2026-08-04', emoji: '🏜️', en: 'Into South Australia',     it: 'Arrivo in South Australia' },
     { date: '2026-08-06', emoji: '🐪', en: 'Into the Territory',        it: 'Arrivo nel Territory' },
     { date: '2026-08-06', emoji: '⛺', en: 'First camp night',          it: 'Prima notte in tenda' },

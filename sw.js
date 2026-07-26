@@ -1,6 +1,6 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v19';
-const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos + avatars
+const CACHE = 'outback-loop-v21';
+const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
 const ASSETS = [
   './index.html',
   './read.html',
@@ -18,6 +18,8 @@ const ASSETS = [
   './route.js',
   './gallery.js',
   './notes.js',
+  './enrichdata.js',
+  './enrich.js',
   './config.js',
   './vendor/supabase.js',
   './manifest.webmanifest',
@@ -64,6 +66,22 @@ self.addEventListener('fetch', function (e) {
         })
       );
     }
+    return;
+  }
+
+  // Destination photos (Wikimedia): cache-on-view so they persist offline once seen.
+  if (url.hostname === 'upload.wikimedia.org') {
+    e.respondWith(
+      caches.open(IMG_CACHE).then(function (c) {
+        return c.match(req).then(function (cached) {
+          var net = fetch(req).then(function (r) {
+            if (r && (r.status === 200 || r.type === 'opaque')) c.put(req, r.clone());
+            return r;
+          }).catch(function () { return cached; });
+          return cached || net;
+        });
+      })
+    );
     return;
   }
 
