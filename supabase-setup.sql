@@ -187,6 +187,27 @@ do $$ begin
   alter publication supabase_realtime add table public.trip_flags;
 exception when others then null; end $$;
 
+-- ---------------------------------------------------------------------------
+-- Likes on comments + comment deletion (note_replies) — same open, link-shared
+-- model as reactions. The app only offers "delete" on a person's own comment.
+-- ---------------------------------------------------------------------------
+create table if not exists public.reply_likes (
+  reply_id   uuid not null references public.note_replies(id) on delete cascade,
+  client_id  text not null,
+  created_at timestamptz not null default now(),
+  unique (reply_id, client_id)
+);
+alter table public.reply_likes enable row level security;
+drop policy if exists "reply_likes read"   on public.reply_likes;
+create policy "reply_likes read"   on public.reply_likes for select using (true);
+drop policy if exists "reply_likes add"    on public.reply_likes;
+create policy "reply_likes add"    on public.reply_likes for insert with check (true);
+drop policy if exists "reply_likes remove" on public.reply_likes;
+create policy "reply_likes remove" on public.reply_likes for delete using (true);
+
+drop policy if exists "replies delete" on public.note_replies;
+create policy "replies delete" on public.note_replies for delete using (true);
+
 -- ============================================================================
 -- STILL TO DO in the dashboard (not SQL):
 --   Authentication → Providers (or Sign In / Providers) → enable

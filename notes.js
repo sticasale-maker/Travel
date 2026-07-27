@@ -23,7 +23,7 @@
                    CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY.indexOf('YOUR-') === -1;
   var BUCKET = 'travel-photos';
 
-  var state = { sb: null, uid: null, remote: [], profiles: {}, profilesByName: {}, reactions: {}, replies: {}, syncing: false, attempts: {}, booted: false };
+  var state = { sb: null, uid: null, remote: [], profiles: {}, profilesByName: {}, reactions: {}, replies: {}, replyLikes: {}, syncing: false, attempts: {}, booted: false };
   var REACTIONS = ['❤️', '😂', '🔥', '👏'];
   function clientId() { var c = localStorage.getItem('travel_client'); if (!c) { c = uuid(); localStorage.setItem('travel_client', c); } return c; }
 
@@ -252,14 +252,23 @@
   }
   function fetchReplies() {
     if (!state.sb) return Promise.resolve();
-    return state.sb.from('note_replies').select('note_id,author,body,created_at').then(function (res) {
+    return state.sb.from('note_replies').select('id,note_id,author,body,created_at,client_id').then(function (res) {
       if (!res.error && res.data) {
         var m = {}; res.data.forEach(function (r) { (m[r.note_id] = m[r.note_id] || []).push(r); });
         state.replies = m; renderAll();
       }
     }).catch(function () {});
   }
-  function fetchSocial() { return Promise.all([fetchReactions(), fetchReplies()]); }
+  function fetchReplyLikes() {
+    if (!state.sb) return Promise.resolve();
+    return state.sb.from('reply_likes').select('reply_id,client_id').then(function (res) {
+      if (!res.error && res.data) {
+        var m = {}; res.data.forEach(function (r) { (m[r.reply_id] = m[r.reply_id] || []).push(r); });
+        state.replyLikes = m; renderAll();
+      }
+    }).catch(function () {});
+  }
+  function fetchSocial() { return Promise.all([fetchReactions(), fetchReplies(), fetchReplyLikes()]); }
 
   function fetchProfiles() {
     if (!state.sb) return Promise.resolve();
@@ -501,9 +510,20 @@
         em + (count ? '<span class="rc">' + count + '</span>' : '') + '</button>';
     }).join('') + '</div>';
   }
+  function replyLikeHTML(replyId) {
+    var likes = state.replyLikes[replyId] || [], mine = clientId(), on = false;
+    likes.forEach(function (r) { if (r.client_id === mine) on = true; });
+    return '<button type="button" class="reply-like' + (on ? ' on' : '') + '" data-rlike="' + esc(replyId) + '" aria-label="Like">' +
+      '❤<span class="rc">' + (likes.length || '') + '</span></button>';
+  }
   function repliesHTML(noteId) {
+    var mineC = clientId();
     var list = (state.replies[noteId] || []).slice().sort(function (a, b) { return (a.created_at || '').localeCompare(b.created_at || ''); });
-    var items = list.map(function (r) { return '<div class="reply"><span class="reply-author">' + esc(r.author || '') + '</span> ' + esc(r.body) + '</div>'; }).join('');
+    var items = list.map(function (r) {
+      var acts = '<span class="reply-acts">' + (r.id ? replyLikeHTML(r.id) : '') +
+        (r.id && r.client_id === mineC ? '<button type="button" class="reply-del" data-rpdel="' + esc(r.id) + '">' + esc(t('del')) + '</button>' : '') + '</span>';
+      return '<div class="reply"><span class="reply-main"><span class="reply-author">' + esc(r.author || '') + '</span> ' + esc(r.body) + '</span>' + acts + '</div>';
+    }).join('');
     return '<div class="replies" data-rpnote="' + esc(noteId) + '">' + items +
       '<div class="reply-add"><input type="text" class="reply-in" placeholder="' + esc(t('reply_ph')) + '" maxlength="240">' +
       '<button type="button" class="reply-send">' + esc(t('reply_send')) + '</button></div></div>';
@@ -706,6 +726,10 @@
       if (e.target.closest('#profile-chip')) openSwitcher();
       var react = e.target.closest('.react');
       if (react) { toggleReaction(react.closest('[data-rnote]').dataset.rnote, react.dataset.emoji, react.closest('.day')); return; }
+      var rlike = e.target.closest('.reply-like');
+      if (rlike) { toggleReplyLike(rlike.dataset.rlike, rlike.closest('.day')); return; }
+      var rpdel = e.target.closest('.reply-del');
+      if (rpdel) { if (!confirm(t('confirm_delete'))) return; deleteReply(rpdel.dataset.rpdel, rpdel.closest('.day')); return; }
       var rsend = e.target.closest('.reply-send');
       if (rsend) {
         var inp = rsend.closest('.reply-add').querySelector('.reply-in'); var b = (inp.value || '').trim();
@@ -735,10 +759,31 @@
   }
   function submitReply(noteId, body, dayEl) {
     if (!state.sb) return;
-    var author = replyAuthor();
-    (state.replies[noteId] || (state.replies[noteId] = [])).push({ author: author, body: body, created_at: nowISO() });
+    var author = replyAuthor(), id = uuid(), mine = clientId();
+    (state.replies[noteId] || (state.replies[noteId] = [])).push({ id: id, author: author, body: body, created_at: nowISO(), client_id: mine });
     renderDay(dayEl);
-    state.sb.from('note_replies').insert({ note_id: noteId, author: author, body: body, client_id: clientId() }).then(fetchReplies).catch(function () {});
+    state.sb.from('note_replies').insert({ id: id, note_id: noteId, author: author, body: body, client_id: mine }).then(fetchReplies).catch(function () {});
+  }
+  function toggleReplyLike(replyId, dayEl) {
+    if (!state.sb) return;
+    var mine = clientId(), list = state.replyLikes[replyId] || (state.replyLikes[replyId] = []), idx = -1;
+    list.forEach(function (r, i) { if (r.client_id === mine) idx = i; });
+    if (idx >= 0) {
+      list.splice(idx, 1); renderDay(dayEl);
+      state.sb.from('reply_likes').delete().eq('reply_id', replyId).eq('client_id', mine).then(fetchReplyLikes).catch(function () {});
+    } else {
+      list.push({ client_id: mine }); renderDay(dayEl);
+      state.sb.from('reply_likes').insert({ reply_id: replyId, client_id: mine }).then(fetchReplyLikes).catch(function () {});
+    }
+  }
+  function deleteReply(replyId, dayEl) {
+    if (!state.sb) return;
+    Object.keys(state.replies).forEach(function (nid) {
+      state.replies[nid] = (state.replies[nid] || []).filter(function (r) { return r.id !== replyId; });
+    });
+    delete state.replyLikes[replyId];
+    renderDay(dayEl);
+    state.sb.from('note_replies').delete().eq('id', replyId).then(fetchReplies).catch(function () {});
   }
 
   function lightbox(url) {

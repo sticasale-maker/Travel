@@ -380,7 +380,17 @@ footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line-strong
 .react .rc{font-family:'Space Mono',monospace; font-size:11px; color:var(--muted); font-weight:700;}
 
 .replies{margin-top:9px; border-top:1px dashed var(--line); padding-top:8px;}
-.reply{font-size:13px; color:var(--ink); padding:2px 0; line-height:1.5;}
+.reply{display:flex; align-items:flex-start; justify-content:space-between; gap:8px;
+  font-size:13px; color:var(--ink); padding:2px 0; line-height:1.5;}
+.reply-main{flex:1 1 auto; min-width:0;}
+.reply-acts{flex:0 0 auto; display:inline-flex; align-items:center; gap:8px; padding-top:1px;}
+.reply-like{border:none; background:none; cursor:pointer; padding:1px 2px; line-height:1;
+  display:inline-flex; align-items:center; gap:3px; font-size:12px; color:var(--faint);}
+.reply-like.on{color:#C0392B;}
+.reply-like .rc{font-family:'Space Mono',monospace; font-size:10.5px; font-weight:700; color:var(--muted);}
+.reply-del{border:none; background:none; cursor:pointer; padding:1px 2px; font-family:'Space Mono',monospace;
+  font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--faint);}
+.reply-del:hover{color:#B4562A;}
 .reply-author{font-weight:600; color:var(--ochre-deep);}
 .reply-add{display:flex; gap:6px; margin-top:6px;}
 .reply-in{flex:1; min-width:0; font-family:'Inter',sans-serif; font-size:13px; padding:6px 9px;
