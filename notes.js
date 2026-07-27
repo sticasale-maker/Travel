@@ -62,7 +62,7 @@
   function personById(id) { return loadPeople().filter(function (p) { return p.id === id; })[0] || null; }
   function activeId() { return localStorage.getItem('travel_active') || ''; }
   function setActive(id) { localStorage.setItem('travel_active', id); }
-  function activePerson() { return personById(activeId()) || loadPeople()[0] || null; }
+  function activePerson() { if (activeId() === '__anon__') return null; return personById(activeId()) || loadPeople()[0] || null; }
   function upsertPerson(p) {
     var a = loadPeople(), i = -1;
     a.forEach(function (x, idx) { if (x.id === p.id) i = idx; });
@@ -807,7 +807,7 @@
           '<span class="prname">' + esc(p.name) + '</span>' +
           '<button type="button" class="pr-edit" data-edit-person="' + esc(p.id) + '">' + esc(t('edit')) + '</button></div>';
       }).join('') + '</div>' +
-      '<button class="add-person-btn" type="button">' + esc(t('add_person')) + '</button></div>';
+      '<button class="add-person-btn follow-anon-btn" type="button">' + esc(t('follow_home')) + '</button></div>';
     document.body.appendChild(modal);
     modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
     modal.querySelectorAll('.person-row').forEach(function (row) {
@@ -819,7 +819,7 @@
     modal.querySelectorAll('[data-edit-person]').forEach(function (b) {
       b.addEventListener('click', function () { modal.remove(); openPerson(b.dataset.editPerson); });
     });
-    modal.querySelector('.add-person-btn').addEventListener('click', function () { modal.remove(); openPerson(null); });
+    modal.querySelector('.follow-anon-btn').addEventListener('click', function () { setActive('__anon__'); modal.remove(); renderProfileChip(); });
   }
 
   // Person editor: add (id=null) or edit an existing person.
@@ -872,6 +872,11 @@
   function renderProfileChip() {
     var host = document.getElementById('profile-chip');
     if (!host || MODE !== 'poster') return;
+    if (activeId() === '__anon__') {
+      host.style.display = 'inline-flex';
+      host.innerHTML = '<span class="pname">' + esc(t('following_chip')) + '</span>';
+      return;
+    }
     var p = activePerson();
     if (!p) { host.style.display = 'none'; return; }
     host.style.display = 'inline-flex';
