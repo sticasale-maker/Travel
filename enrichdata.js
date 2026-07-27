@@ -21,12 +21,12 @@ window.TRIP_ENRICH = {
       { id: 'jp-gardens', cat: 'garden', name: 'Osawano Japanese Gardens', en: 'Free, tranquil gardens by the caves.', it: 'Giardini giapponesi gratuiti, vicino alle grotte.', dur: '30–45 min', q: 'Japanese Gardens Wellington NSW', hours: 'Daily 10:00–18:00' }
     ],
     food: [
-      { kind: 'restaurant', name: 'Royal India Restobar', rating: '4.7', en: 'Stylish Indian, generous portions.', it: 'Indiano elegante, porzioni abbondanti.', q: 'Royal India Restobar Dubbo', hours: 'Daily 17:00–21:00', avg: 'mains ~$22' },
-      { kind: 'cafe', name: 'Grapevine Cafe', rating: '4.5', en: 'Heritage cafe, famed banana bread.', it: 'Caffè storico, banana bread famoso.', q: 'Grapevine Cafe Dubbo', hours: 'Mon–Fri 7:00–15:00; Sat–Sun 8:00–14:00', avg: 'brunch ~$26' },
-      { kind: 'restaurant', name: 'Old Bank Restaurant & Bar', rating: '4.4', en: '1870s building, craft beer, steaks.', it: 'Edificio del 1870, birre artigianali, bistecche.', q: 'Old Bank Restaurant and Bar Dubbo', hours: 'Tue–Sat 12:00–14:30, 18:00–21:00', avg: 'mains $28–38' },
-      { kind: 'cafe', name: 'The Lithgow Tin Shed', rating: '4.5', en: 'Rustic cafe, homemade pies.', it: 'Caffè rustico, torte salate fatte in casa.', q: 'The Lithgow Tin Shed', where: 'Lithgow', hours: 'Mon–Fri 6:30–15:00; Sat 8:00–14:30; Sun 8:00–15:00', avg: 'mains ~$25' },
-      { kind: 'cafe', name: 'The Hub', rating: '4.6', en: 'Open-fire cafe, great brunch.', it: 'Caffè col camino, ottimo brunch.', q: 'The Hub Bathurst', where: 'Bathurst', hours: 'Mon, Wed–Sat 7:00–15:00; Sun 8:00–14:00', avg: 'brunch ~$22' },
-      { kind: 'cafe', name: 'Crema on Lords', rating: '4.8', en: 'Top coffee, free piccolo while you wait.', it: 'Caffè top, piccolo gratis nell’attesa.', q: 'Crema on Lords Orange NSW', where: 'Orange', hours: 'Mon–Fri 5:00–13:00; Sat–Sun 6:00–13:00', avg: 'brunch ~$20' }
+      { kind: 'restaurant', name: 'Royal India Restobar', rating: '4.7', en: 'Stylish Indian, generous portions.', it: 'Indiano elegante, porzioni abbondanti.', q: 'Royal India Restobar Dubbo', n: 2209, hours: 'Daily 17:00–21:00', avg: 'mains ~$22' },
+      { kind: 'cafe', name: 'Grapevine Cafe', rating: '4.5', en: 'Heritage cafe, famed banana bread.', it: 'Caffè storico, banana bread famoso.', q: 'Grapevine Cafe Dubbo', n: 440, hours: 'Mon–Fri 7:00–15:00; Sat–Sun 8:00–14:00', avg: 'brunch ~$26' },
+      { kind: 'restaurant', name: 'Old Bank Restaurant & Bar', rating: '4.4', en: '1870s building, craft beer, steaks.', it: 'Edificio del 1870, birre artigianali, bistecche.', q: 'Old Bank Restaurant and Bar Dubbo', n: 665, hours: 'Tue–Sat 12:00–14:30, 18:00–21:00', avg: 'mains $28–38' },
+      { kind: 'cafe', name: 'The Lithgow Tin Shed', rating: '4.5', en: 'Rustic cafe, homemade pies.', it: 'Caffè rustico, torte salate fatte in casa.', q: 'The Lithgow Tin Shed', n: 1386, where: 'Lithgow', hours: 'Mon–Fri 6:30–15:00; Sat 8:00–14:30; Sun 8:00–15:00', avg: 'mains ~$25', t: '2:00' },
+      { kind: 'cafe', name: 'The Hub', rating: '4.6', en: 'Open-fire cafe, great brunch.', it: 'Caffè col camino, ottimo brunch.', q: 'The Hub Bathurst', n: 967, where: 'Bathurst', hours: 'Mon, Wed–Sat 7:00–15:00; Sun 8:00–14:00', avg: 'brunch ~$22', t: '2:45' },
+      { kind: 'cafe', name: 'Crema on Lords', rating: '4.8', en: 'Top coffee, free piccolo while you wait.', it: 'Caffè top, piccolo gratis nell’attesa.', q: 'Crema on Lords Orange NSW', n: 350, where: 'Orange', hours: 'Mon–Fri 5:00–13:00; Sat–Sun 6:00–13:00', avg: 'brunch ~$20', t: '3:30' }
     ]
   },
 
@@ -41,10 +41,10 @@ window.TRIP_ENRICH = {
       { id: 'heritage-walk', cat: 'walk', name: 'Cobar Heritage Walk', en: 'Self-guided walk past mining-era sites.', it: 'Passeggiata tra i siti dell’epoca mineraria.', dur: '1 h', q: 'Cobar Heritage Walk', hours: '24/7' }
     ],
     food: [
-      { kind: 'cafe', name: 'Ay-Jays Cafe', rating: '4.4', en: 'Friendly; steak sandwiches, milkshakes.', it: 'Accogliente; panini con bistecca, frappè.', q: 'Ay-Jays Cafe Cobar', hours: 'Daily 4:00–14:00; Mon–Sat 17:30–20:00', avg: 'brunch ~$20' },
-      { kind: 'pub', name: 'Great Western Hotel', rating: '4.0', en: '1898 pub, long iron-lace veranda, hearty meals.', it: 'Pub del 1898, veranda in ferro, piatti sostanziosi.', q: 'Great Western Hotel Motel Cobar', hours: 'Daily 10:00–late (meals 12:00–14:00, 18:00–21:00)', avg: 'mains ~$28' },
-      { kind: 'cafe', name: 'The Bogan Coffee Shop', rating: '4.6', en: 'Best coffee since Sydney, fresh pies.', it: 'Miglior caffè da Sydney, torte fresche.', q: 'Bogan Coffee Shop Nyngan', where: 'Nyngan', hours: 'Mon–Fri 6:00–14:30; Sat 8:00–14:00', avg: 'light meals ~$14' },
-      { kind: 'cafe', name: "Mart's Cafe", rating: '4.6', en: 'Local favourite: burgers, coffee, opens early.', it: 'Preferito dai locali: burger, caffè, apre presto.', q: "Mart's Cafe Nyngan", where: 'Nyngan', hours: 'Mon–Fri 5:30–16:00; Sat 7:00–14:00', avg: 'mains ~$16' }
+      { kind: 'cafe', name: 'Ay-Jays Cafe', rating: '4.4', en: 'Friendly; steak sandwiches, milkshakes.', it: 'Accogliente; panini con bistecca, frappè.', q: 'Ay-Jays Cafe Cobar', n: 199, hours: 'Daily 4:00–14:00; Mon–Sat 17:30–20:00', avg: 'brunch ~$20' },
+      { kind: 'pub', name: 'Great Western Hotel', rating: '4.0', en: '1898 pub, long iron-lace veranda, hearty meals.', it: 'Pub del 1898, veranda in ferro, piatti sostanziosi.', q: 'Great Western Hotel Motel Cobar', n: 397, hours: 'Daily 10:00–late (meals 12:00–14:00, 18:00–21:00)', avg: 'mains ~$28' },
+      { kind: 'cafe', name: 'The Bogan Coffee Shop', rating: '4.6', en: 'Best coffee since Sydney, fresh pies.', it: 'Miglior caffè da Sydney, torte fresche.', q: 'Bogan Coffee Shop Nyngan', n: 71, where: 'Nyngan', hours: 'Mon–Fri 6:00–14:30; Sat 8:00–14:00', avg: 'light meals ~$14', t: '1:45' },
+      { kind: 'cafe', name: "Mart's Cafe", rating: '4.6', en: 'Local favourite: burgers, coffee, opens early.', it: 'Preferito dai locali: burger, caffè, apre presto.', q: "Mart's Cafe Nyngan", n: 227, where: 'Nyngan', hours: 'Mon–Fri 5:30–16:00; Sat 7:00–14:00', avg: 'mains ~$16', t: '1:45' }
     ]
   },
 
@@ -60,10 +60,10 @@ window.TRIP_ENRICH = {
       { id: 'rfds', cat: 'heritage', name: 'Royal Flying Doctor Service', en: 'Interactive outback flying-doctor exhibit.', it: 'Mostra interattiva sui medici volanti.', dur: '1 h', q: 'Royal Flying Doctor Service Visitor Centre Broken Hill', hours: 'Mon–Fri 9:00–17:00; Sat–Sun 10:00–15:00' }
     ],
     food: [
-      { kind: 'restaurant', name: 'The Old Salt Bush', rating: '4.9', en: 'Award-winning modern Australian — book ahead.', it: 'Cucina australiana moderna premiata — prenotare.', q: 'The Old Salt Bush Restaurant Broken Hill', hours: 'Thu–Sat 18:00–22:00', avg: 'mains ~$42' },
-      { kind: 'cafe', name: 'The Silly Goat', rating: '4.5', en: 'Melbourne-grade coffee, creative brunch.', it: 'Caffè da Melbourne, brunch creativo.', q: 'The Silly Goat Broken Hill', hours: 'Daily 7:00–15:00', avg: 'brunch ~$20' },
-      { kind: 'cafe', name: "Alfresco's Cafe", rating: '4.2', en: 'Lively all-day breakfast, big serves.', it: 'Colazione tutto il giorno, porzioni grandi.', q: "Alfresco's Cafe Broken Hill", hours: 'Daily 7:00–22:30', avg: 'brunch ~$22' },
-      { kind: 'roadhouse', name: 'Emmdale Roadhouse', rating: '', en: 'Bacon-egg rolls, burgers, shakes.', it: 'Panini, burger, frappè.', q: 'Emmdale Roadhouse Wilcannia', where: 'Emmdale', hours: 'Daily 7:00–20:00', avg: 'counter meals ~$12' }
+      { kind: 'restaurant', name: 'The Old Salt Bush', rating: '4.9', en: 'Award-winning modern Australian — book ahead.', it: 'Cucina australiana moderna premiata — prenotare.', q: 'The Old Salt Bush Restaurant Broken Hill', n: 113, hours: 'Thu–Sat 18:00–22:00', avg: 'mains ~$42' },
+      { kind: 'cafe', name: 'The Silly Goat', rating: '4.5', en: 'Melbourne-grade coffee, creative brunch.', it: 'Caffè da Melbourne, brunch creativo.', q: 'The Silly Goat Broken Hill', n: 2385, hours: 'Daily 7:00–15:00', avg: 'brunch ~$20' },
+      { kind: 'cafe', name: "Alfresco's Cafe", rating: '4.2', en: 'Lively all-day breakfast, big serves.', it: 'Colazione tutto il giorno, porzioni grandi.', q: "Alfresco's Cafe Broken Hill", n: 467, hours: 'Daily 7:00–22:30', avg: 'brunch ~$22' },
+      { kind: 'roadhouse', name: 'Emmdale Roadhouse', rating: '', en: 'Bacon-egg rolls, burgers, shakes.', it: 'Panini, burger, frappè.', q: 'Emmdale Roadhouse Wilcannia', n: 78, where: 'Emmdale', hours: 'Daily 7:00–20:00', avg: 'counter meals ~$12', t: '1:15' }
     ]
   },
 
@@ -79,8 +79,8 @@ window.TRIP_ENRICH = {
       { id: 'daydream-mine', cat: 'mine', name: 'Daydream Mine tour', en: 'Guided 1880s underground silver workings.', it: 'Visita guidata alla miniera d’argento del 1880.', dur: '1–1.5 h', q: 'Daydream Mine Silverton', hours: 'Tours 10:00, 11:30' }
     ],
     food: [
-      { kind: 'pub', name: 'Silverton Hotel', rating: '4.2', en: 'Iconic outback pub, Mad Max car out front.', it: 'Pub iconico, auto di Mad Max all’ingresso.', q: 'Silverton Hotel Silverton NSW', hours: 'Tue–Sat 8:00–23:00; Sun–Mon shorter', avg: 'mains ~$20' },
-      { kind: 'bakery', name: 'Silverton Bakery and Cafe', rating: '4.6', en: 'Fresh pastries, pies, sausage rolls, coffee.', it: 'Paste fresche, torte, rotoli di salsiccia, caffè.', q: 'Silverton Bakery and Cafe', hours: 'Daily 7:00–16:00', avg: 'snacks ~$8' }
+      { kind: 'pub', name: 'Silverton Hotel', rating: '4.2', en: 'Iconic outback pub, Mad Max car out front.', it: 'Pub iconico, auto di Mad Max all’ingresso.', q: 'Silverton Hotel Silverton NSW', n: 1246, hours: 'Tue–Sat 8:00–23:00; Sun–Mon shorter', avg: 'mains ~$20' },
+      { kind: 'bakery', name: 'Silverton Bakery and Cafe', rating: '4.6', en: 'Fresh pastries, pies, sausage rolls, coffee.', it: 'Paste fresche, torte, rotoli di salsiccia, caffè.', q: 'Silverton Bakery and Cafe', n: 176, hours: 'Daily 7:00–16:00', avg: 'snacks ~$8' }
     ]
   },
 
@@ -92,12 +92,11 @@ window.TRIP_ENRICH = {
     todo: [
       { id: 'missile-park', cat: 'science', name: 'Woomera Missile Park', en: 'Free outdoor rocket & missile display.', it: 'Parco di razzi e missili all’aperto, gratis.', dur: '45 min', q: 'Woomera Missile Park South Australia', hours: '24/7' },
       { id: 'heritage-centre', cat: 'heritage', name: 'Woomera Heritage Centre', en: 'Rocket-range history, Kokatha artefacts.', it: 'Storia del poligono, reperti Kokatha.', dur: '45–60 min', q: 'Woomera Heritage and Visitor Information Centre', hours: 'Daily 9:00–17:00' },
-      { id: 'lake-hart', cat: 'lookout', name: 'Lake Hart lookout', en: 'Huge roadside salt lake, great photo stop.', it: 'Enorme lago salato, sosta foto.', dur: '20–30 min', q: 'Lake Hart Lookout Stuart Highway South Australia', hours: '24/7', where: 'Stuart Hwy' },
       { id: 'woomera-town', cat: 'drive', name: 'Woomera township drive', en: 'Former secret rocket town: church, cemetery.', it: 'Ex città segreta dei razzi: chiesa, cimitero.', dur: '30 min', q: 'Woomera township South Australia', hours: '24/7' }
     ],
     food: [
-      { kind: 'roadhouse', name: "Spud's Roadhouse", rating: '', en: 'Iconic fuel/food/beds; steak & schnitzel.', it: 'Storico fuel/cibo/letti; bistecca e schnitzel.', q: "Spud's Roadhouse Pimba", hours: 'Daily 6:00–22:00', avg: 'counter meals ~$18' },
-      { kind: 'pub', name: 'Eldo Hotel — Oasis Bar', rating: '4.0', en: "1960s rocket-town pub, hearty counter meals.", it: 'Pub del 1960, piatti sostanziosi al banco.', q: 'Eldo Hotel Woomera', where: 'Woomera', hours: 'Daily 12:00–23:00 (café from 6:00)', avg: 'mains ~$28' }
+      { kind: 'roadhouse', name: "Spud's Roadhouse", rating: '', en: 'Iconic fuel/food/beds; steak & schnitzel.', it: 'Storico fuel/cibo/letti; bistecca e schnitzel.', q: "Spud's Roadhouse Pimba", n: 808, hours: 'Daily 6:00–22:00', avg: 'counter meals ~$18' },
+      { kind: 'pub', name: 'Eldo Hotel — Oasis Bar', rating: '4.0', en: "1960s rocket-town pub, hearty counter meals.", it: 'Pub del 1960, piatti sostanziosi al banco.', q: 'Eldo Hotel Woomera', n: 157, hours: 'Daily 12:00–23:00 (café from 6:00)', avg: 'mains ~$28' }
     ]
   },
 
@@ -107,6 +106,7 @@ window.TRIP_ENRICH = {
     warn: { en: 'Good supply town — stock up food, water & fuel before the NT.', it: 'Buona città per rifornimenti — fate scorta di cibo, acqua e benzina prima del NT.' },
     coverage: { telstra: 'good', optus: 'good', note: 'Both serve the town; nothing reliable just outside it.' },
     todo: [
+      { id: 'lake-hart', cat: 'lookout', name: 'Lake Hart lookout', en: 'Huge roadside salt lake, great photo stop.', it: 'Enorme lago salato, sosta foto.', dur: '20–30 min', q: 'Lake Hart Lookout Stuart Highway South Australia', hours: '24/7', where: 'Stuart Hwy', t: '0:40' },
       { id: 'old-timers', cat: 'mine', name: 'Old Timers Mine', en: 'Self-guided 1916 mine, underground home.', it: 'Miniera del 1916 e casa sotterranea, visita libera.', dur: '1–1.5 h', q: 'Old Timers Mine Coober Pedy', hours: 'Daily 8:30–17:30' },
       { id: 'umoona', cat: 'mine', name: 'Umoona Opal Mine & Museum', en: 'Guided mine tour, free museum.', it: 'Tour guidato in miniera, museo gratuito.', dur: '1 h', q: 'Umoona Opal Mine and Museum Coober Pedy', hours: 'Daily 8:30–17:30 (tours 10:00, 14:00, 16:00)' },
       { id: 'fayes', cat: 'heritage', name: "Faye's Underground Home", en: 'Hand-dug home built by three women.', it: 'Casa scavata a mano da tre donne.', dur: '30–45 min', q: "Faye's Historic Underground Home Coober Pedy", hours: 'Mon–Sat 8:30–17:00; Sun 14:00–17:00' },
@@ -116,9 +116,9 @@ window.TRIP_ENRICH = {
       { id: 'golf', cat: 'star', name: 'Coober Pedy Golf Club', en: 'Grassless course; glow-ball night golf.', it: 'Campo senza erba; golf notturno con palline luminose.', dur: '1–2 h', q: 'Coober Pedy Golf Club', hours: 'Pay & play; night events ~18:00' }
     ],
     food: [
-      { kind: 'cafe', name: 'Crystal Cafe (Desert Cave)', rating: '', en: 'Underground hotel cafe; buffet breakfast.', it: 'Caffè d’hotel sotterraneo; colazione a buffet.', q: 'Crystal Cafe Desert Cave Hotel Coober Pedy', hours: 'Daily 7:00–14:00', avg: 'mains ~$28' },
-      { kind: 'restaurant', name: "John's Pizza Bar", rating: '', en: 'Long-running family pizza & Italian.', it: 'Storica pizzeria/trattoria di famiglia.', q: "John's Pizza Bar Coober Pedy", hours: 'Daily 10:00–21:00', avg: 'mains ~$22' },
-      { kind: 'pub', name: 'Outback Bar & Grill', rating: '', en: 'Steaks and casual outback pub grub.', it: 'Bistecche e piatti da pub.', q: 'Outback Bar and Grill Coober Pedy', hours: 'Mon–Sat 7:00–21:00; Sun 7:00–20:00', avg: 'mains $28–38' }
+      { kind: 'cafe', name: 'Crystal Cafe (Desert Cave)', rating: '', en: 'Underground hotel cafe; buffet breakfast.', it: 'Caffè d’hotel sotterraneo; colazione a buffet.', q: 'Crystal Cafe Desert Cave Hotel Coober Pedy', n: 40, hours: 'Daily 7:00–14:00', avg: 'mains ~$28' },
+      { kind: 'restaurant', name: "John's Pizza Bar", rating: '', en: 'Long-running family pizza & Italian.', it: 'Storica pizzeria/trattoria di famiglia.', q: "John's Pizza Bar Coober Pedy", n: 2000, hours: 'Daily 10:00–21:00', avg: 'mains ~$22' },
+      { kind: 'pub', name: 'Outback Bar & Grill', rating: '', en: 'Steaks and casual outback pub grub.', it: 'Bistecche e piatti da pub.', q: 'Outback Bar and Grill Coober Pedy', n: 2160, hours: 'Mon–Sat 7:00–21:00; Sun 7:00–20:00', avg: 'mains $28–38' }
     ]
   },
 
@@ -147,8 +147,8 @@ window.TRIP_ENRICH = {
     coverage: { telstra: 'none', optus: 'none', note: 'No signal on the Mereenie Loop or at Redbank/Ridgetop. Tell someone your plan.' },
     link: { url: "https://www.google.com/maps/dir/Ginty's+Lookout,+Mereenie+NT+0872/Gosses+Bluff+Crater,+Hermannsburg+NT+0872/Redbank+Gorge,+Mount+Zeil+NT+0872/Ormiston+Gorge+Campground,+Ormiston+Gorge+Access,+Mount+Zeil+NT+0872/Serpentine+Gorge,+Namatjira+NT+0872/Ellery+Creek+Campground,+Ellery+Big+Hole,+Namatjira+NT+0872/Standley+Chasm,+Hugh+NT+0872/Simpsons+Gap,+Burt+Plain+NT+0872/@-23.8107548,131.9136489,203691m/data=!3m1!1e3!4m50!4m49!1m5!1m1!1s0x2b3b84fbacbfcfdd:0x93549646de7bc8a!2m2!1d131.408325!2d-24.0609908!1m5!1m1!1s0x2b3a6165c4186b3d:0xd995b3b467d3a373!2m2!1d132.306861!2d-23.819081!1m5!1m1!1s0x2b305bad05697b51:0x207b39cd346c9894!2m2!1d132.5198625!2d-23.5658364!1m5!1m1!1s0x2b308f50ac4084a5:0x1b77e95d63edbb7!2m2!1d132.7270455!2d-23.6331946!1m5!1m1!1s0x2b305ae0fa9eb6b7:0x1e5ea43d0e271237!2m2!1d132.978581!2d-23.7502886!1m5!1m1!1s0x2b304fe6a5e0bb59:0xe8bf3164b2e3d0b3!2m2!1d133.0725167!2d-23.7803328!1m5!1m1!1s0x2b31be117b944c7b:0xc665863abc970c8d!2m2!1d133.4697823!2d-23.7220649!1m5!1m1!1s0x2b318b5e3ba6c641:0xa6480be844a9e480!2m2!1d133.7193309!2d-23.674068!3e0?entry=ttu", en: 'Drive the full Mereenie Loop Track (Ginty’s → Simpsons Gap)', it: 'Percorri tutto il Mereenie Loop (Ginty’s → Simpsons Gap)' },
     todo: [
-      { id: 'gintys', cat: 'lookout', name: "Ginty's Lookout", en: 'Roadside view back over the escarpment.', it: 'Belvedere sulla scarpata.', dur: '20–30 min', q: "Ginty's Lookout Mereenie Loop Road", hours: '24/7 (4WD final approach)', where: 'Mereenie Loop' },
-      { id: 'gosse-bluff', cat: 'lookout', name: 'Tnorala (Gosse Bluff)', en: '142-million-year-old comet crater rim.', it: 'Cratere da cometa di 142 milioni di anni.', dur: '1 h', q: 'Tnorala Gosse Bluff Conservation Reserve', hours: '24/7 (picnic/rim area; last 5 km 4WD)', where: 'Mereenie Loop' },
+      { id: 'gintys', cat: 'lookout', name: "Ginty's Lookout", en: 'Roadside view back over the escarpment.', it: 'Belvedere sulla scarpata.', dur: '20–30 min', q: "Ginty's Lookout Mereenie Loop Road", hours: '24/7 (4WD final approach)', where: 'Mereenie Loop', t: '0:30' },
+      { id: 'gosse-bluff', cat: 'lookout', name: 'Tnorala (Gosse Bluff)', en: '142-million-year-old comet crater rim.', it: 'Cratere da cometa di 142 milioni di anni.', dur: '1 h', q: 'Tnorala Gosse Bluff Conservation Reserve', hours: '24/7 (picnic/rim area; last 5 km 4WD)', where: 'Mereenie Loop', t: '2:30' },
       { id: 'redbank-swim', cat: 'swim', name: 'Redbank Gorge', en: 'Narrow gorge waterhole — deep and icy.', it: 'Pozza in gola stretta — profonda e gelida.', dur: '1.5 h', q: 'Redbank Gorge carpark West MacDonnell National Park', hours: '24/7 (last 5 km 4WD)' },
       { id: 'mt-sonder', cat: 'lookout', name: 'Mt Sonder sunset', en: 'Sunset glow over Mt Sonder from camp.', it: 'Tramonto sul Mt Sonder dal campo.', dur: '30 min', q: 'Mount Sonder viewpoint Redbank Gorge', hours: '24/7' }
     ]
@@ -160,8 +160,8 @@ window.TRIP_ENRICH = {
     warn: { en: 'Only kiosk food is at Ormiston — carry all supplies for camp.', it: 'Cibo solo al chiosco di Ormiston — portate tutte le scorte per il campo.' },
     coverage: { telstra: 'patchy', optus: 'patchy', note: 'A little Telstra at Standley Chasm / Optus at Ormiston; gorges mostly none.' },
     todo: [
-      { id: 'ormiston', cat: 'walk', name: 'Ormiston Gorge', en: 'Ghost Gum Walk (~1.5 h); kiosk for lunch.', it: 'Ghost Gum Walk (~1,5 h); chiosco per pranzo.', dur: '1.5 h', q: 'Ormiston Gorge West MacDonnell National Park', hours: '24/7', where: 'Namatjira Dr' },
-      { id: 'serpentine', cat: 'lookout', name: 'Serpentine Gorge', en: 'Narrow gorge; steep lookout climb.', it: 'Gola stretta; salita ripida al belvedere.', dur: '45 min–1 h', q: 'Serpentine Gorge West MacDonnell National Park', hours: '24/7', where: 'Namatjira Dr' },
+      { id: 'ormiston', cat: 'walk', name: 'Ormiston Gorge', en: 'Ghost Gum Walk (~1.5 h); kiosk for lunch.', it: 'Ghost Gum Walk (~1,5 h); chiosco per pranzo.', dur: '1.5 h', q: 'Ormiston Gorge West MacDonnell National Park', hours: '24/7', where: 'Namatjira Dr', t: '0:30' },
+      { id: 'serpentine', cat: 'lookout', name: 'Serpentine Gorge', en: 'Narrow gorge; steep lookout climb.', it: 'Gola stretta; salita ripida al belvedere.', dur: '45 min–1 h', q: 'Serpentine Gorge West MacDonnell National Park', hours: '24/7', where: 'Namatjira Dr', t: '1:15' },
       { id: 'ellery-swim', cat: 'swim', name: 'Ellery Creek Big Hole', en: 'Short walk to a deep, icy waterhole.', it: 'Breve cammino a una pozza profonda e gelida.', dur: '20–30 min', q: 'Ellery Creek Big Hole West MacDonnell National Park', hours: '24/7' }
     ],
     food: [
@@ -174,19 +174,19 @@ window.TRIP_ENRICH = {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/d/d8/Alice_Springs_ridge.jpeg', credit: 'Stephen Codrington', license: 'CC BY 2.5', alt: 'Alice Springs and the MacDonnell Ranges' },
     coverage: { telstra: 'good', optus: 'good', note: 'Full 4G/5G both carriers — last big hub; stock up before the drive south.' },
     todo: [
-      { id: 'standley', cat: 'lookout', name: 'Standley Chasm', en: 'Red-walled chasm, glowing best at midday.', it: 'Gola dalle pareti rosse, top a mezzogiorno.', dur: '1–1.5 h', q: 'Standley Chasm Angkerle Atwatye', hours: 'Mon–Sat 8:00–17:00; Sun/PH 8:00–14:00 (fee)', where: 'West MacDonnells' },
-      { id: 'simpsons-gap', cat: 'walk', name: 'Simpsons Gap', en: 'Easy gap walk; black-footed rock wallabies.', it: 'Facile cammino; wallaby delle rocce.', dur: '1 h', q: 'Simpsons Gap West MacDonnell National Park', hours: '24/7', where: 'West MacDonnells' },
+      { id: 'standley', cat: 'lookout', name: 'Standley Chasm', en: 'Red-walled chasm, glowing best at midday.', it: 'Gola dalle pareti rosse, top a mezzogiorno.', dur: '1–1.5 h', q: 'Standley Chasm Angkerle Atwatye', hours: 'Mon–Sat 8:00–17:00; Sun/PH 8:00–14:00 (fee)', where: 'West MacDonnells', t: '0:50' },
+      { id: 'simpsons-gap', cat: 'walk', name: 'Simpsons Gap', en: 'Easy gap walk; black-footed rock wallabies.', it: 'Facile cammino; wallaby delle rocce.', dur: '1 h', q: 'Simpsons Gap West MacDonnell National Park', hours: '24/7', where: 'West MacDonnells', t: '1:20' },
       { id: 'desert-park', cat: 'wildlife', name: 'Alice Springs Desert Park', en: 'Walk-through habitats; birds-of-prey show.', it: 'Habitat da attraversare; spettacolo di rapaci.', dur: '2.5–3 h', q: 'Alice Springs Desert Park', hours: 'Daily 7:30–18:00 (last entry 16:30)' },
       { id: 'anzac-hill', cat: 'lookout', name: 'ANZAC Hill (Untyeyetwelye)', en: '360° views over town and the ranges.', it: 'Vista a 360° su città e catene montuose.', dur: '20–30 min', q: 'ANZAC Hill Lookout Alice Springs', hours: '24/7' },
       { id: 'telegraph', cat: 'heritage', name: 'Telegraph Station', en: '1870s Overland Telegraph, the town’s birthplace.', it: 'Telegrafo del 1870, origine della città.', dur: '1–1.5 h', q: 'Alice Springs Telegraph Station Historical Reserve', hours: 'Daily 8:00–21:00 (buildings to 16:00)' },
       { id: 'todd-mall', cat: 'art', name: 'Todd Mall', en: 'Aboriginal art galleries, cafes, Sunday markets.', it: 'Gallerie d’arte aborigena, caffè, mercati domenicali.', dur: '1–2 h', q: 'Todd Mall Alice Springs', hours: '24/7 (shops vary)' }
     ],
     food: [
-      { kind: 'cafe', name: 'Page 27 Cafe', rating: '4.5', en: 'Ranked #1 in town; top brunch and coffee.', it: '#1 in città; brunch e caffè top.', q: 'Page 27 Cafe Todd Mall Alice Springs', hours: 'Mon–Fri 7:00–14:00; Sat–Sun 7:30–14:00', avg: 'brunch ~$18' },
+      { kind: 'cafe', name: 'Page 27 Cafe', rating: '4.5', en: 'Ranked #1 in town; top brunch and coffee.', it: '#1 in città; brunch e caffè top.', q: 'Page 27 Cafe Todd Mall Alice Springs', n: 2000, hours: 'Mon–Fri 7:00–14:00; Sat–Sun 7:30–14:00', avg: 'brunch ~$18' },
       { kind: 'restaurant', name: 'Simply Korean', rating: '4.6', en: 'Local favourite; Korean BBQ and hot pots.', it: 'Preferito locale; BBQ coreano e hot pot.', q: 'Simply Korean Restaurant Alice Springs', hours: 'Mon–Sat 17:30–21:30', avg: 'mains ~$26' },
-      { kind: 'cafe', name: 'Watertank Cafe', rating: '4.5', en: 'Industrial-chic garden cafe; great coffee.', it: 'Caffè giardino industrial-chic; ottimo caffè.', q: 'Watertank Cafe Alice Springs', hours: 'Mon, Wed–Fri 7:30–14:00; Sat–Sun 8:00–14:00', avg: 'brunch ~$20' },
-      { kind: 'pub', name: 'Epilogue Lounge', rating: '4.4', en: 'Rooftop bar; tapas menu and live music.', it: 'Bar sul tetto; tapas e musica dal vivo.', q: 'Epilogue Lounge Alice Springs', hours: 'Tue–Sun from 7:00 (Wed–Sat till late)', avg: 'mains ~$22' },
-      { kind: 'cafe', name: 'Standley Chasm kiosk', rating: '', en: 'Barista coffee, home-baked scones, lunches.', it: 'Caffè, scones fatti in casa, pranzi.', q: 'Standley Chasm cafe', where: 'Standley Chasm', hours: 'Mon–Sat 8:00–17:00; Sun 8:00–14:00', avg: 'counter meals ~$16' }
+      { kind: 'cafe', name: 'Watertank Cafe', rating: '4.5', en: 'Industrial-chic garden cafe; great coffee.', it: 'Caffè giardino industrial-chic; ottimo caffè.', q: 'Watertank Cafe Alice Springs', n: 1169, hours: 'Mon, Wed–Fri 7:30–14:00; Sat–Sun 8:00–14:00', avg: 'brunch ~$20' },
+      { kind: 'pub', name: 'Epilogue Lounge', rating: '4.4', en: 'Rooftop bar; tapas menu and live music.', it: 'Bar sul tetto; tapas e musica dal vivo.', q: 'Epilogue Lounge Alice Springs', n: 1844, hours: 'Tue–Sun from 7:00 (Wed–Sat till late)', avg: 'mains ~$22' },
+      { kind: 'cafe', name: 'Standley Chasm kiosk', rating: '', en: 'Barista coffee, home-baked scones, lunches.', it: 'Caffè, scones fatti in casa, pranzi.', q: 'Standley Chasm cafe', where: 'Standley Chasm', hours: 'Mon–Sat 8:00–17:00; Sun 8:00–14:00', avg: 'counter meals ~$16', t: '0:50' }
     ]
   },
 
@@ -201,7 +201,7 @@ window.TRIP_ENRICH = {
       { id: 'oodnadatta', cat: 'drive', name: 'Oodnadatta Track terminus', en: 'Photo at the famous outback track’s end.', it: 'Foto all’inizio della celebre pista outback.', dur: '10 min', q: 'Oodnadatta Track Marla SA', hours: '24/7' }
     ],
     food: [
-      { kind: 'roadhouse', name: 'Marla Travellers Rest', rating: '3.5', en: 'The only place in town — roadhouse meals.', it: 'L’unico locale in paese — piatti da roadhouse.', q: 'Marla Travellers Rest Marla SA', hours: '24/7 (happy hour 17:00–18:00)', avg: 'mains ~$22' }
+      { kind: 'roadhouse', name: 'Marla Travellers Rest', rating: '3.5', en: 'The only place in town — roadhouse meals.', it: 'L’unico locale in paese — piatti da roadhouse.', q: 'Marla Travellers Rest Marla SA', n: 77, hours: '24/7 (happy hour 17:00–18:00)', avg: 'mains ~$22' }
     ]
   },
 
@@ -216,10 +216,10 @@ window.TRIP_ENRICH = {
       { id: 'foreshore', cat: 'walk', name: 'Foreshore & Marina', en: 'Easy walk along the Spencer Gulf waterfront.', it: 'Passeggiata sul lungomare dello Spencer Gulf.', dur: '30–45 min', q: 'Port Augusta Foreshore', hours: '24/7' }
     ],
     food: [
-      { kind: 'cafe', name: "Archers' Table", rating: '4.6', en: 'Top-rated; generous cooked breakfasts.', it: 'Il più votato; ricche colazioni cotte.', q: 'Archers Table Port Augusta', hours: 'Mon–Fri 7:00–15:00; Sat 7:00–12:00; Sun 8:00–12:00', avg: 'brunch ~$22' },
-      { kind: 'cafe', name: "Mamma Lou's", rating: '4.0', en: 'In the old railway station; watch trains pass.', it: 'Nella vecchia stazione; guarda passare i treni.', q: "Mamma Lou's Port Augusta", hours: 'Mon–Fri 7:30–14:30; Sat–Sun 8:00–13:00', avg: 'brunch ~$18' },
-      { kind: 'restaurant', name: 'Curries by Beard Brothers', rating: '4.5', en: 'New; authentic Indian, generous portions.', it: 'Nuovo; indiano autentico, porzioni abbondanti.', q: 'Curries by Beard Brothers Port Augusta', hours: 'Daily lunch/dinner (see Google)', avg: 'mains ~$22' },
-      { kind: 'cafe', name: 'Botanic Garden Cafe', rating: '4.3', en: 'Garden-view lunch inside the botanic garden.', it: 'Pranzo con vista sul giardino botanico.', q: 'Australian Arid Lands Botanic Garden Cafe', hours: 'Mon–Fri 9:00–15:00; Sat–Sun 10:00–14:00', avg: 'light meals ~$16' }
+      { kind: 'cafe', name: "Archers' Table", rating: '4.6', en: 'Top-rated; generous cooked breakfasts.', it: 'Il più votato; ricche colazioni cotte.', q: 'Archers Table Port Augusta', n: 1265, hours: 'Mon–Fri 7:00–15:00; Sat 7:00–12:00; Sun 8:00–12:00', avg: 'brunch ~$22' },
+      { kind: 'cafe', name: "Mamma Lou's", rating: '4.0', en: 'In the old railway station; watch trains pass.', it: 'Nella vecchia stazione; guarda passare i treni.', q: "Mamma Lou's Port Augusta", n: 409, hours: 'Mon–Fri 7:30–14:30; Sat–Sun 8:00–13:00', avg: 'brunch ~$18' },
+      { kind: 'restaurant', name: 'Curries by Beard Brothers', rating: '4.5', en: 'New; authentic Indian, generous portions.', it: 'Nuovo; indiano autentico, porzioni abbondanti.', q: 'Curries by Beard Brothers Port Augusta', n: 340, hours: 'Daily lunch/dinner (see Google)', avg: 'mains ~$22' },
+      { kind: 'cafe', name: 'Botanic Garden Cafe', rating: '4.3', en: 'Garden-view lunch inside the botanic garden.', it: 'Pranzo con vista sul giardino botanico.', q: 'Australian Arid Lands Botanic Garden Cafe', n: 750, hours: 'Mon–Fri 9:00–15:00; Sat–Sun 10:00–14:00', avg: 'light meals ~$16' }
     ]
   },
 
@@ -235,7 +235,7 @@ window.TRIP_ENRICH = {
       { id: 'sunset-area', cat: 'lookout', name: 'Sunset Viewing Area', en: 'Flat-horizon sunset, 16 km north.', it: 'Tramonto sull’orizzonte piatto, 16 km a nord.', dur: '20–30 min', q: 'Sunset Viewing Area Cobb Highway Hay NSW', hours: '24/7' }
     ],
     food: [
-      { kind: 'pub', name: 'South Hay Hotel', rating: '4.6', en: 'Local favourite; parmi, barramundi, big serves.', it: 'Preferito locale; parmigiana, barramundi, porzioni grandi.', q: 'South Hay Hotel Hay South NSW', hours: 'Meals: lunch Tue–Fri 12:00–14:00; dinner Mon–Sat 18:00–20:30', avg: 'mains ~$24' }
+      { kind: 'pub', name: 'South Hay Hotel', rating: '4.6', en: 'Local favourite; parmi, barramundi, big serves.', it: 'Preferito locale; parmigiana, barramundi, porzioni grandi.', q: 'South Hay Hotel Hay South NSW', n: 393, hours: 'Meals: lunch Tue–Fri 12:00–14:00; dinner Mon–Sat 18:00–20:30', avg: 'mains ~$24' }
     ]
   },
 

@@ -515,6 +515,10 @@ details.ex h5{margin:0; padding:9px 13px 3px; font-family:'Space Mono',monospace
   border-radius:20px; padding:1px 8px 1px 5px; margin-left:6px; vertical-align:middle; white-space:nowrap;}
 .rt-where .rt-pin{width:11px; height:11px; color:var(--ochre); flex:0 0 auto;}
 .day.camp .rt-where{background:#FBEFCF;}
+.rt-time{display:inline-flex; align-items:center; gap:3px; font-family:'Space Mono',monospace; font-size:10px;
+  font-weight:700; color:#fff; background:var(--ochre); border-radius:20px; padding:1px 8px 1px 6px;
+  margin-left:6px; vertical-align:middle; white-space:nowrap;}
+.rt-time .rt-car{width:12px; height:12px; color:#fff; flex:0 0 auto;}
 .onway-ex > summary .ei{color:var(--ochre);}
 
 .stars{display:inline-grid; vertical-align:-1px; font-size:12px; line-height:1;}
@@ -522,6 +526,7 @@ details.ex h5{margin:0; padding:9px 13px 3px; font-family:'Space Mono',monospace
 .stars .s-b{color:var(--line-strong);}
 .stars .s-f{color:#E0982E; overflow:hidden;}
 .s-n{font-family:'Space Mono',monospace; font-size:11px; color:var(--muted); margin-left:4px;}
+.s-count{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--faint); margin-left:3px;}
 .rev{display:inline-flex; align-items:center; gap:3px; font-family:'Space Mono',monospace;
   font-size:10.5px; color:var(--teal);}
 .rev-i{width:12px; height:12px; color:#E0982E;}

@@ -93,16 +93,19 @@
   }
 
   // ---- star rating --------------------------------------------------------
-  function rating(r) {
+  function revNum(n) { return n >= 1000 ? (Math.round(n / 100) / 10) + 'k' : ('' + n); }
+  function reviewCount(n) { return n ? '<span class="s-count">(' + revNum(n) + ')</span>' : ''; }
+  function rating(r, n) {
     var m = String(r || '').match(/(\d(?:\.\d)?)/);
     if (!m) {
+      if (n) return '<span class="rev">' + icon('star', 'rev-i') + revNum(n) + ' ' + esc(it() ? 'recensioni' : 'reviews') + '</span>';
       return r ? '<span class="rev">' + icon('star', 'rev-i') + esc(it() ? 'ben recensito' : 'well-reviewed') + '</span>' : '';
     }
     var v = parseFloat(m[1]), pct = Math.max(0, Math.min(100, v / 5 * 100));
     return '<span class="stars" title="' + v + '/5" aria-label="' + v + ' out of 5">' +
       '<span class="s-b">★★★★★</span>' +
       '<span class="s-f" style="width:' + pct.toFixed(0) + '%">★★★★★</span>' +
-      '</span><span class="s-n">' + v.toFixed(1) + '</span>';
+      '</span><span class="s-n">' + v.toFixed(1) + '</span>' + reviewCount(n);
   }
 
   // ---- flag store (localStorage + Supabase sync) --------------------------
@@ -202,10 +205,14 @@
   function whereTag(x) {
     return x.where ? '<span class="rt-where">' + icon('pin', 'rt-pin') + esc(x.where) + '</span>' : '';
   }
+  function driveTag(x) {
+    return x.t ? '<span class="rt-time" title="' + (it() ? 'Tempo di guida dalla partenza di oggi' : 'Drive time from today’s start') + '">' +
+      icon('drive', 'rt-car') + '~' + esc(x.t) + '</span>' : '';
+  }
   function todoItemHTML(date, x) {
     var id = date + ':' + x.id;
     return '<li class="todo-item"><span class="ti-ic">' + icon(x.cat) + '</span>' +
-      '<div class="ti-main"><span class="ti-name">' + esc(x.name) + '</span>' + whereTag(x) +
+      '<div class="ti-main"><span class="ti-name">' + esc(x.name) + '</span>' + driveTag(x) + whereTag(x) +
       (x.dur ? '<span class="ti-dur">' + icon('clock') + esc(x.dur) + '</span>' : '') +
       '<span class="ti-blurb">' + esc(it() ? x.it : x.en) + '</span>' + hoursHTML(x.hours) + '</div>' +
       '<span class="flag-yn" data-flag="' + esc(id) + '">' +
@@ -217,8 +224,8 @@
   }
   function foodRow(f) {
     return '<li class="food-item"><span class="fi-ic">' + icon(KIND_IC[f.kind] || 'eat') + '</span>' +
-      '<div class="fi-main"><span class="fi-name">' + esc(f.name) + '</span> ' + rating(f.rating) +
-      (f.avg ? ' <span class="fi-price">' + esc(localizePrice(f.avg)) + '</span>' : '') + whereTag(f) +
+      '<div class="fi-main"><span class="fi-name">' + esc(f.name) + '</span> ' + rating(f.rating, f.n) +
+      (f.avg ? ' <span class="fi-price">' + esc(localizePrice(f.avg)) + '</span>' : '') + driveTag(f) + whereTag(f) +
       '<span class="fi-blurb">' + esc(it() ? f.it : f.en) + '</span>' + hoursHTML(f.hours) + '</div>' +
       (f.q ? '<a class="ti-map" target="_blank" rel="noopener" href="' + mapUrl(f.q) + '" aria-label="Map">' + icon('pin') + '</a>' : '') +
       '</li>';
