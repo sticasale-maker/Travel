@@ -23,7 +23,7 @@ window.TRIP_ENRICH = {
     food: [
       { kind: 'restaurant', name: 'Royal India Restobar', rating: '4.7', en: 'Stylish Indian, generous portions.', it: 'Indiano elegante, porzioni abbondanti.', q: 'Royal India Restobar Dubbo', n: 2209, hours: 'Daily 17:00–21:00', avg: 'mains ~$22' },
       { kind: 'cafe', name: 'Grapevine Cafe', rating: '4.5', en: 'Heritage cafe, famed banana bread.', it: 'Caffè storico, banana bread famoso.', q: 'Grapevine Cafe Dubbo', n: 440, hours: 'Mon–Fri 7:00–15:00; Sat–Sun 8:00–14:00', avg: 'brunch ~$26' },
-      { kind: 'restaurant', name: 'Old Bank Restaurant & Bar', rating: '4.4', en: '1870s building, craft beer, steaks.', it: 'Edificio del 1870, birre artigianali, bistecche.', q: 'Old Bank Restaurant and Bar Dubbo', n: 665, hours: 'Tue–Sat 12:00–14:30, 18:00–21:00', avg: 'mains $28–38' },
+      { kind: 'restaurant', name: 'Two Doors Tapas & Wine Bar', rating: '4.4', en: 'Ranked #1 in Dubbo — tapas, wine, sunset terrace.', it: 'Il #1 di Dubbo — tapas, vino e terrazza al tramonto.', q: 'Two Doors Tapas and Wine Bar Dubbo', n: 200, hours: 'Tue–Sun from 17:00; Sat–Sun brunch 8:30–12:00; closed Mon', avg: 'small plates ~$22' },
       { kind: 'cafe', name: 'The Lithgow Tin Shed', rating: '4.5', en: 'Rustic cafe, homemade pies.', it: 'Caffè rustico, torte salate fatte in casa.', q: 'The Lithgow Tin Shed', n: 1386, where: 'Lithgow', hours: 'Mon–Fri 6:30–15:00; Sat 8:00–14:30; Sun 8:00–15:00', avg: 'mains ~$25', t: '2:00' },
       { kind: 'cafe', name: 'The Hub', rating: '4.6', en: 'Open-fire cafe, great brunch.', it: 'Caffè col camino, ottimo brunch.', q: 'The Hub Bathurst', n: 967, where: 'Bathurst', hours: 'Mon, Wed–Sat 7:00–15:00; Sun 8:00–14:00', avg: 'brunch ~$22', t: '2:45' },
       { kind: 'cafe', name: 'Crema on Lords', rating: '4.8', en: 'Top coffee, free piccolo while you wait.', it: 'Caffè top, piccolo gratis nell’attesa.', q: 'Crema on Lords Orange NSW', n: 350, where: 'Orange', hours: 'Mon–Fri 5:00–13:00; Sat–Sun 6:00–13:00', avg: 'brunch ~$20', t: '3:30' }
@@ -91,7 +91,7 @@ window.TRIP_ENRICH = {
     coverage: { telstra: 'good', optus: 'patchy', note: 'Telstra at the roadhouse/town; Optus intermittent. Nothing between stops.' },
     todo: [
       { id: 'missile-park', cat: 'science', name: 'Woomera Missile Park', en: 'Free outdoor rocket & missile display.', it: 'Parco di razzi e missili all’aperto, gratis.', dur: '45 min', q: 'Woomera Missile Park South Australia', hours: '24/7' },
-      { id: 'heritage-centre', cat: 'heritage', name: 'Woomera Heritage Centre', en: 'Rocket-range history, Kokatha artefacts.', it: 'Storia del poligono, reperti Kokatha.', dur: '45–60 min', q: 'Woomera Heritage and Visitor Information Centre', hours: 'Daily 9:00–17:00' },
+      { id: 'heritage-centre', cat: 'heritage', name: 'Woomera Heritage Centre', en: 'Rocket-range history, Kokatha artefacts.', it: 'Storia del poligono, reperti Kokatha.', dur: '45–60 min', q: 'Woomera Heritage and Visitor Information Centre', hours: 'Mon–Fri 6:30–15:00; Sat–Sun 7:00–15:00' },
       { id: 'woomera-town', cat: 'drive', name: 'Woomera township drive', en: 'Former secret rocket town: church, cemetery.', it: 'Ex città segreta dei razzi: chiesa, cimitero.', dur: '30 min', q: 'Woomera township South Australia', hours: '24/7' }
     ],
     food: [
