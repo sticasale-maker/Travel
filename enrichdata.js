@@ -24,9 +24,9 @@ window.TRIP_ENRICH = {
       { kind: 'restaurant', name: 'Royal India Restobar', rating: '4.7', en: 'Stylish Indian, generous portions.', it: 'Indiano elegante, porzioni abbondanti.', q: 'Royal India Restobar Dubbo', hours: 'Daily 17:00–21:00', avg: 'mains ~$22' },
       { kind: 'cafe', name: 'Grapevine Cafe', rating: '4.5', en: 'Heritage cafe, famed banana bread.', it: 'Caffè storico, banana bread famoso.', q: 'Grapevine Cafe Dubbo', hours: 'Mon–Fri 7:00–15:00; Sat–Sun 8:00–14:00', avg: 'brunch ~$26' },
       { kind: 'restaurant', name: 'Old Bank Restaurant & Bar', rating: '4.4', en: '1870s building, craft beer, steaks.', it: 'Edificio del 1870, birre artigianali, bistecche.', q: 'Old Bank Restaurant and Bar Dubbo', hours: 'Tue–Sat 12:00–14:30, 18:00–21:00', avg: 'mains $28–38' },
+      { kind: 'cafe', name: 'The Lithgow Tin Shed', rating: '4.5', en: 'Rustic cafe, homemade pies.', it: 'Caffè rustico, torte salate fatte in casa.', q: 'The Lithgow Tin Shed', where: 'Lithgow', hours: 'Mon–Fri 6:30–15:00; Sat 8:00–14:30; Sun 8:00–15:00', avg: 'mains ~$25' },
       { kind: 'cafe', name: 'The Hub', rating: '4.6', en: 'Open-fire cafe, great brunch.', it: 'Caffè col camino, ottimo brunch.', q: 'The Hub Bathurst', where: 'Bathurst', hours: 'Mon, Wed–Sat 7:00–15:00; Sun 8:00–14:00', avg: 'brunch ~$22' },
-      { kind: 'cafe', name: 'Crema on Lords', rating: '4.8', en: 'Top coffee, free piccolo while you wait.', it: 'Caffè top, piccolo gratis nell’attesa.', q: 'Crema on Lords Orange NSW', where: 'Orange', hours: 'Mon–Fri 5:00–13:00; Sat–Sun 6:00–13:00', avg: 'brunch ~$20' },
-      { kind: 'cafe', name: 'The Lithgow Tin Shed', rating: '4.5', en: 'Rustic cafe, homemade pies.', it: 'Caffè rustico, torte salate fatte in casa.', q: 'The Lithgow Tin Shed', where: 'Lithgow', hours: 'Mon–Fri 6:30–15:00; Sat 8:00–14:30; Sun 8:00–15:00', avg: 'mains ~$25' }
+      { kind: 'cafe', name: 'Crema on Lords', rating: '4.8', en: 'Top coffee, free piccolo while you wait.', it: 'Caffè top, piccolo gratis nell’attesa.', q: 'Crema on Lords Orange NSW', where: 'Orange', hours: 'Mon–Fri 5:00–13:00; Sat–Sun 6:00–13:00', avg: 'brunch ~$20' }
     ]
   },
 
@@ -92,7 +92,7 @@ window.TRIP_ENRICH = {
     todo: [
       { id: 'missile-park', cat: 'science', name: 'Woomera Missile Park', en: 'Free outdoor rocket & missile display.', it: 'Parco di razzi e missili all’aperto, gratis.', dur: '45 min', q: 'Woomera Missile Park South Australia', hours: '24/7' },
       { id: 'heritage-centre', cat: 'heritage', name: 'Woomera Heritage Centre', en: 'Rocket-range history, Kokatha artefacts.', it: 'Storia del poligono, reperti Kokatha.', dur: '45–60 min', q: 'Woomera Heritage and Visitor Information Centre', hours: 'Daily 9:00–17:00' },
-      { id: 'lake-hart', cat: 'lookout', name: 'Lake Hart lookout', en: 'Huge roadside salt lake, great photo stop.', it: 'Enorme lago salato, sosta foto.', dur: '20–30 min', q: 'Lake Hart Lookout Stuart Highway South Australia', hours: '24/7' },
+      { id: 'lake-hart', cat: 'lookout', name: 'Lake Hart lookout', en: 'Huge roadside salt lake, great photo stop.', it: 'Enorme lago salato, sosta foto.', dur: '20–30 min', q: 'Lake Hart Lookout Stuart Highway South Australia', hours: '24/7', where: 'Stuart Hwy' },
       { id: 'woomera-town', cat: 'drive', name: 'Woomera township drive', en: 'Former secret rocket town: church, cemetery.', it: 'Ex città segreta dei razzi: chiesa, cimitero.', dur: '30 min', q: 'Woomera township South Australia', hours: '24/7' }
     ],
     food: [
@@ -147,8 +147,8 @@ window.TRIP_ENRICH = {
     coverage: { telstra: 'none', optus: 'none', note: 'No signal on the Mereenie Loop or at Redbank/Ridgetop. Tell someone your plan.' },
     link: { url: "https://www.google.com/maps/dir/Ginty's+Lookout,+Mereenie+NT+0872/Gosses+Bluff+Crater,+Hermannsburg+NT+0872/Redbank+Gorge,+Mount+Zeil+NT+0872/Ormiston+Gorge+Campground,+Ormiston+Gorge+Access,+Mount+Zeil+NT+0872/Serpentine+Gorge,+Namatjira+NT+0872/Ellery+Creek+Campground,+Ellery+Big+Hole,+Namatjira+NT+0872/Standley+Chasm,+Hugh+NT+0872/Simpsons+Gap,+Burt+Plain+NT+0872/@-23.8107548,131.9136489,203691m/data=!3m1!1e3!4m50!4m49!1m5!1m1!1s0x2b3b84fbacbfcfdd:0x93549646de7bc8a!2m2!1d131.408325!2d-24.0609908!1m5!1m1!1s0x2b3a6165c4186b3d:0xd995b3b467d3a373!2m2!1d132.306861!2d-23.819081!1m5!1m1!1s0x2b305bad05697b51:0x207b39cd346c9894!2m2!1d132.5198625!2d-23.5658364!1m5!1m1!1s0x2b308f50ac4084a5:0x1b77e95d63edbb7!2m2!1d132.7270455!2d-23.6331946!1m5!1m1!1s0x2b305ae0fa9eb6b7:0x1e5ea43d0e271237!2m2!1d132.978581!2d-23.7502886!1m5!1m1!1s0x2b304fe6a5e0bb59:0xe8bf3164b2e3d0b3!2m2!1d133.0725167!2d-23.7803328!1m5!1m1!1s0x2b31be117b944c7b:0xc665863abc970c8d!2m2!1d133.4697823!2d-23.7220649!1m5!1m1!1s0x2b318b5e3ba6c641:0xa6480be844a9e480!2m2!1d133.7193309!2d-23.674068!3e0?entry=ttu", en: 'Drive the full Mereenie Loop Track (Ginty’s → Simpsons Gap)', it: 'Percorri tutto il Mereenie Loop (Ginty’s → Simpsons Gap)' },
     todo: [
-      { id: 'gintys', cat: 'lookout', name: "Ginty's Lookout", en: 'Roadside view back over the escarpment.', it: 'Belvedere sulla scarpata.', dur: '20–30 min', q: "Ginty's Lookout Mereenie Loop Road", hours: '24/7 (4WD final approach)' },
-      { id: 'gosse-bluff', cat: 'lookout', name: 'Tnorala (Gosse Bluff)', en: '142-million-year-old comet crater rim.', it: 'Cratere da cometa di 142 milioni di anni.', dur: '1 h', q: 'Tnorala Gosse Bluff Conservation Reserve', hours: '24/7 (picnic/rim area; last 5 km 4WD)' },
+      { id: 'gintys', cat: 'lookout', name: "Ginty's Lookout", en: 'Roadside view back over the escarpment.', it: 'Belvedere sulla scarpata.', dur: '20–30 min', q: "Ginty's Lookout Mereenie Loop Road", hours: '24/7 (4WD final approach)', where: 'Mereenie Loop' },
+      { id: 'gosse-bluff', cat: 'lookout', name: 'Tnorala (Gosse Bluff)', en: '142-million-year-old comet crater rim.', it: 'Cratere da cometa di 142 milioni di anni.', dur: '1 h', q: 'Tnorala Gosse Bluff Conservation Reserve', hours: '24/7 (picnic/rim area; last 5 km 4WD)', where: 'Mereenie Loop' },
       { id: 'redbank-swim', cat: 'swim', name: 'Redbank Gorge', en: 'Narrow gorge waterhole — deep and icy.', it: 'Pozza in gola stretta — profonda e gelida.', dur: '1.5 h', q: 'Redbank Gorge carpark West MacDonnell National Park', hours: '24/7 (last 5 km 4WD)' },
       { id: 'mt-sonder', cat: 'lookout', name: 'Mt Sonder sunset', en: 'Sunset glow over Mt Sonder from camp.', it: 'Tramonto sul Mt Sonder dal campo.', dur: '30 min', q: 'Mount Sonder viewpoint Redbank Gorge', hours: '24/7' }
     ]
@@ -160,8 +160,8 @@ window.TRIP_ENRICH = {
     warn: { en: 'Only kiosk food is at Ormiston — carry all supplies for camp.', it: 'Cibo solo al chiosco di Ormiston — portate tutte le scorte per il campo.' },
     coverage: { telstra: 'patchy', optus: 'patchy', note: 'A little Telstra at Standley Chasm / Optus at Ormiston; gorges mostly none.' },
     todo: [
-      { id: 'ormiston', cat: 'walk', name: 'Ormiston Gorge', en: 'Ghost Gum Walk (~1.5 h); kiosk for lunch.', it: 'Ghost Gum Walk (~1,5 h); chiosco per pranzo.', dur: '1.5 h', q: 'Ormiston Gorge West MacDonnell National Park', hours: '24/7' },
-      { id: 'serpentine', cat: 'lookout', name: 'Serpentine Gorge', en: 'Narrow gorge; steep lookout climb.', it: 'Gola stretta; salita ripida al belvedere.', dur: '45 min–1 h', q: 'Serpentine Gorge West MacDonnell National Park', hours: '24/7' },
+      { id: 'ormiston', cat: 'walk', name: 'Ormiston Gorge', en: 'Ghost Gum Walk (~1.5 h); kiosk for lunch.', it: 'Ghost Gum Walk (~1,5 h); chiosco per pranzo.', dur: '1.5 h', q: 'Ormiston Gorge West MacDonnell National Park', hours: '24/7', where: 'Namatjira Dr' },
+      { id: 'serpentine', cat: 'lookout', name: 'Serpentine Gorge', en: 'Narrow gorge; steep lookout climb.', it: 'Gola stretta; salita ripida al belvedere.', dur: '45 min–1 h', q: 'Serpentine Gorge West MacDonnell National Park', hours: '24/7', where: 'Namatjira Dr' },
       { id: 'ellery-swim', cat: 'swim', name: 'Ellery Creek Big Hole', en: 'Short walk to a deep, icy waterhole.', it: 'Breve cammino a una pozza profonda e gelida.', dur: '20–30 min', q: 'Ellery Creek Big Hole West MacDonnell National Park', hours: '24/7' }
     ],
     food: [
@@ -174,8 +174,8 @@ window.TRIP_ENRICH = {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/d/d8/Alice_Springs_ridge.jpeg', credit: 'Stephen Codrington', license: 'CC BY 2.5', alt: 'Alice Springs and the MacDonnell Ranges' },
     coverage: { telstra: 'good', optus: 'good', note: 'Full 4G/5G both carriers — last big hub; stock up before the drive south.' },
     todo: [
-      { id: 'standley', cat: 'lookout', name: 'Standley Chasm', en: 'Red-walled chasm, glowing best at midday.', it: 'Gola dalle pareti rosse, top a mezzogiorno.', dur: '1–1.5 h', q: 'Standley Chasm Angkerle Atwatye', hours: 'Mon–Sat 8:00–17:00; Sun/PH 8:00–14:00 (fee)' },
-      { id: 'simpsons-gap', cat: 'walk', name: 'Simpsons Gap', en: 'Easy gap walk; black-footed rock wallabies.', it: 'Facile cammino; wallaby delle rocce.', dur: '1 h', q: 'Simpsons Gap West MacDonnell National Park', hours: '24/7' },
+      { id: 'standley', cat: 'lookout', name: 'Standley Chasm', en: 'Red-walled chasm, glowing best at midday.', it: 'Gola dalle pareti rosse, top a mezzogiorno.', dur: '1–1.5 h', q: 'Standley Chasm Angkerle Atwatye', hours: 'Mon–Sat 8:00–17:00; Sun/PH 8:00–14:00 (fee)', where: 'West MacDonnells' },
+      { id: 'simpsons-gap', cat: 'walk', name: 'Simpsons Gap', en: 'Easy gap walk; black-footed rock wallabies.', it: 'Facile cammino; wallaby delle rocce.', dur: '1 h', q: 'Simpsons Gap West MacDonnell National Park', hours: '24/7', where: 'West MacDonnells' },
       { id: 'desert-park', cat: 'wildlife', name: 'Alice Springs Desert Park', en: 'Walk-through habitats; birds-of-prey show.', it: 'Habitat da attraversare; spettacolo di rapaci.', dur: '2.5–3 h', q: 'Alice Springs Desert Park', hours: 'Daily 7:30–18:00 (last entry 16:30)' },
       { id: 'anzac-hill', cat: 'lookout', name: 'ANZAC Hill (Untyeyetwelye)', en: '360° views over town and the ranges.', it: 'Vista a 360° su città e catene montuose.', dur: '20–30 min', q: 'ANZAC Hill Lookout Alice Springs', hours: '24/7' },
       { id: 'telegraph', cat: 'heritage', name: 'Telegraph Station', en: '1870s Overland Telegraph, the town’s birthplace.', it: 'Telegrafo del 1870, origine della città.', dur: '1–1.5 h', q: 'Alice Springs Telegraph Station Historical Reserve', hours: 'Daily 8:00–21:00 (buildings to 16:00)' },

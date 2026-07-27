@@ -198,49 +198,52 @@
       return '<span class="hl" title="' + esc(catLabel(c)) + '">' + icon(c) + '</span>';
     }).join('') + '</div>';
   }
-  function todoHTML(date, list) {
-    var rows = list.map(function (x) {
-      var id = date + ':' + x.id;
-      return '<li class="todo-item"><span class="ti-ic">' + icon(x.cat) + '</span>' +
-        '<div class="ti-main"><span class="ti-name">' + esc(x.name) + '</span>' +
-        (x.dur ? '<span class="ti-dur">' + icon('clock') + esc(x.dur) + '</span>' : '') +
-        '<span class="ti-blurb">' + esc(it() ? x.it : x.en) + '</span>' + hoursHTML(x.hours) + '</div>' +
-        '<span class="flag-yn" data-flag="' + esc(id) + '">' +
-          '<button type="button" class="flag-btn yes" data-val="yes">' + esc(t('flag_yes')) + '</button>' +
-          '<button type="button" class="flag-btn no" data-val="no">' + esc(t('flag_no')) + '</button>' +
-        '</span>' +
-        (x.q ? '<a class="ti-map" target="_blank" rel="noopener" href="' + mapUrl(x.q) + '" aria-label="Map">' + icon('pin') + '</a>' : '') +
-        '</li>';
-    }).join('');
-    return '<details class="ex todo-ex"><summary>' + icon('check') + '<span>' + esc(t('todo_title')) +
-      '</span><span class="ex-count">' + list.length + '</span></summary>' +
-      '<ul class="todo-list">' + rows + '</ul></details>';
+  function isRoute(x) { return !!x.where; }
+  function whereTag(x) {
+    return x.where ? '<span class="rt-where">' + icon('pin', 'rt-pin') + esc(x.where) + '</span>' : '';
+  }
+  function todoItemHTML(date, x) {
+    var id = date + ':' + x.id;
+    return '<li class="todo-item"><span class="ti-ic">' + icon(x.cat) + '</span>' +
+      '<div class="ti-main"><span class="ti-name">' + esc(x.name) + '</span>' + whereTag(x) +
+      (x.dur ? '<span class="ti-dur">' + icon('clock') + esc(x.dur) + '</span>' : '') +
+      '<span class="ti-blurb">' + esc(it() ? x.it : x.en) + '</span>' + hoursHTML(x.hours) + '</div>' +
+      '<span class="flag-yn" data-flag="' + esc(id) + '">' +
+        '<button type="button" class="flag-btn yes" data-val="yes">' + esc(t('flag_yes')) + '</button>' +
+        '<button type="button" class="flag-btn no" data-val="no">' + esc(t('flag_no')) + '</button>' +
+      '</span>' +
+      (x.q ? '<a class="ti-map" target="_blank" rel="noopener" href="' + mapUrl(x.q) + '" aria-label="Map">' + icon('pin') + '</a>' : '') +
+      '</li>';
   }
   function foodRow(f) {
     return '<li class="food-item"><span class="fi-ic">' + icon(KIND_IC[f.kind] || 'eat') + '</span>' +
       '<div class="fi-main"><span class="fi-name">' + esc(f.name) + '</span> ' + rating(f.rating) +
-      (f.avg ? ' <span class="fi-price">' + esc(localizePrice(f.avg)) + '</span>' : '') +
+      (f.avg ? ' <span class="fi-price">' + esc(localizePrice(f.avg)) + '</span>' : '') + whereTag(f) +
       '<span class="fi-blurb">' + esc(it() ? f.it : f.en) + '</span>' + hoursHTML(f.hours) + '</div>' +
       (f.q ? '<a class="ti-map" target="_blank" rel="noopener" href="' + mapUrl(f.q) + '" aria-label="Map">' + icon('pin') + '</a>' : '') +
       '</li>';
   }
+  function todoHTML(date, list) {
+    return '<details class="ex todo-ex"><summary>' + icon('check') + '<span>' + esc(t('todo_title')) +
+      '</span><span class="ex-count">' + list.length + '</span></summary>' +
+      '<ul class="todo-list">' + list.map(function (x) { return todoItemHTML(date, x); }).join('') + '</ul></details>';
+  }
   function foodHTML(list) {
-    var at = list.filter(function (f) { return !f.where; });
-    var route = list.filter(function (f) { return f.where; });
-    var body = '';
-    if (at.length) {
-      body += (route.length ? '<h5>' + esc(t('food_at')) + '</h5>' : '') +
-        '<ul class="food-list">' + at.map(foodRow).join('') + '</ul>';
-    }
-    if (route.length) {
-      body += '<h5>' + esc(t('food_route')) + '</h5><ul class="food-list">' +
-        route.map(function (f) {
-          return foodRow({ kind: f.kind, name: f.name, rating: f.rating, q: f.q, avg: f.avg, hours: f.hours,
-            en: f.en + ' — ' + f.where, it: f.it + ' — ' + f.where });
-        }).join('') + '</ul>';
-    }
     return '<details class="ex food-ex"><summary>' + icon('eat') + '<span>' + esc(t('food_title')) +
-      '</span><span class="ex-count">' + list.length + '</span></summary>' + body + '</details>';
+      '</span><span class="ex-count">' + list.length + '</span></summary>' +
+      '<ul class="food-list">' + list.map(foodRow).join('') + '</ul></details>';
+  }
+  // "On the way to X": route attractions + eateries, in the order you pass them.
+  function onwayHTML(date, items, dest) {
+    var rows = items.map(function (x) { return x.kind ? foodRow(x) : todoItemHTML(date, x); }).join('');
+    return '<details class="ex onway-ex"><summary>' + icon('drive') + '<span>' + esc(t('onway_title', { dest: dest })) +
+      '</span><span class="ex-count">' + items.length + '</span></summary>' +
+      '<ul class="todo-list onway-list">' + rows + '</ul></details>';
+  }
+  function destName(day) {
+    var p = day.querySelector('.place'); if (!p) return '';
+    var c = p.cloneNode(true), lead = c.querySelector('.lead'); if (lead) lead.parentNode.removeChild(lead);
+    return c.textContent.trim();
   }
 
   function onClick(e) {
@@ -267,8 +270,13 @@
       html += highlightsHTML(d, day.classList.contains('camp'));
       if (d.coverage) html += coverageHTML(d.coverage);
       if (d.link) html += linkHTML(d.link);
-      if (d.todo && d.todo.length) html += todoHTML(day.dataset.date, d.todo);
-      if (d.food && d.food.length) html += foodHTML(d.food);
+      var todo = d.todo || [], food = d.food || [];
+      var routeItems = todo.filter(isRoute).concat(food.filter(isRoute));
+      var todoDest = todo.filter(function (x) { return !isRoute(x); });
+      var foodDest = food.filter(function (x) { return !isRoute(x); });
+      if (routeItems.length) html += onwayHTML(day.dataset.date, routeItems, destName(day));
+      if (todoDest.length) html += todoHTML(day.dataset.date, todoDest);
+      if (foodDest.length) html += foodHTML(foodDest);
       el.innerHTML = html;
       var img = el.querySelector('.day-photo img');
       if (img) img.addEventListener('error', function () { var f = img.closest('.day-photo'); if (f) f.style.display = 'none'; });

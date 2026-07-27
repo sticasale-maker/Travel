@@ -510,6 +510,12 @@ details.ex[open] > summary{border-bottom:1px solid var(--line);}
 .day.camp .food-item{border-top-color:var(--camp-line);}
 details.ex h5{margin:0; padding:9px 13px 3px; font-family:'Space Mono',monospace; font-size:10.5px;
   letter-spacing:.06em; text-transform:uppercase; color:var(--faint);}
+.rt-where{display:inline-flex; align-items:center; gap:2px; font-family:'Space Mono',monospace; font-size:10px;
+  font-weight:700; letter-spacing:.02em; color:var(--ochre-deep); background:var(--paper-3);
+  border-radius:20px; padding:1px 8px 1px 5px; margin-left:6px; vertical-align:middle; white-space:nowrap;}
+.rt-where .rt-pin{width:11px; height:11px; color:var(--ochre); flex:0 0 auto;}
+.day.camp .rt-where{background:#FBEFCF;}
+.onway-ex > summary .ei{color:var(--ochre);}
 
 .stars{display:inline-grid; vertical-align:-1px; font-size:12px; line-height:1;}
 .stars .s-b, .stars .s-f{grid-area:1/1; letter-spacing:1.5px; white-space:nowrap;}
