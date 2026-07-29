@@ -356,6 +356,20 @@ footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line-strong
 .overlay-close{position:absolute; top:12px; right:12px; width:32px; height:32px; border-radius:50%;
   border:1px solid var(--line-strong); background:var(--paper-2); color:var(--muted); cursor:pointer; font-size:15px;}
 
+/* ---- pull-to-refresh ---- */
+body{overscroll-behavior-y:contain;}
+.ptr{position:fixed; top:-46px; left:50%; transform:translateX(-50%); z-index:200;
+  width:38px; height:38px; border-radius:50%; background:var(--paper);
+  box-shadow:0 3px 14px -5px rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none;}
+.ptr.snap{transition:transform .2s ease, opacity .2s ease;}
+.ptr-spin{width:20px; height:20px; border-radius:50%;
+  border:2.5px solid var(--line-strong); border-top-color:var(--ochre);}
+.ptr.ready .ptr-spin{border-top-color:var(--ochre-deep);}
+.ptr.spinning{transition:transform .2s ease;}
+.ptr.spinning .ptr-spin{animation:ptr-rot .7s linear infinite;}
+@keyframes ptr-rot{to{transform:rotate(360deg);}}
+
 .welcome-overlay{align-items:center;}
 .welcome-panel{max-width:460px;}
 .welcome-lang{display:flex; gap:6px; margin:2px 0 12px;}
