@@ -191,16 +191,6 @@
     return '<a class="drive-link" target="_blank" rel="noopener" href="' + esc(l.url) + '">' +
       icon('drive') + '<span>' + esc(it() ? l.it : l.en) + '</span>' + icon('pin', 'dl-go') + '</a>';
   }
-  function highlightsHTML(d, isCamp) {
-    var cats = [];
-    (d.todo || []).forEach(function (x) { if (x.cat && cats.indexOf(x.cat) < 0) cats.push(x.cat); });
-    if (isCamp && cats.indexOf('camp') < 0) cats.push('camp');
-    cats = cats.slice(0, 6);
-    if (!cats.length) return '';
-    return '<div class="hl-strip">' + cats.map(function (c) {
-      return '<span class="hl" title="' + esc(catLabel(c)) + '">' + icon(c) + '</span>';
-    }).join('') + '</div>';
-  }
   function isRoute(x) { return !!x.where; }
   function whereTag(x) {
     return x.where ? '<span class="rt-where">' + icon('pin', 'rt-pin') + esc(x.where) + '</span>' : '';
@@ -274,7 +264,6 @@
       var html = '';
       if (d.photo) html += photoHTML(d.photo);
       if (d.warn) html += warnHTML(d.warn);
-      html += highlightsHTML(d, day.classList.contains('camp'));
       if (d.coverage) html += coverageHTML(d.coverage);
       if (d.link) html += linkHTML(d.link);
       var todo = d.todo || [], food = d.food || [];
