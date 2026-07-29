@@ -576,7 +576,7 @@
     });
   }
 
-  function renderAll() { document.querySelectorAll('.day').forEach(renderDay); updateSyncStatus(); renderProfileChip(); }
+  function renderAll() { document.querySelectorAll('.day').forEach(renderDay); updateSyncStatus(); renderProfileChip(); updateBadge(); }
 
   // ---------------------------------------------------------------- capture UI
   function buildDayUI(dayEl) {
@@ -899,6 +899,24 @@
     });
   }
 
+  // -------------------------------------------------------- unread app badge
+  // Badges the installed-app icon with the count of journal entries from other
+  // people that arrived since you last had the app open. (Updates while the app
+  // is open; live updates when closed would need push notifications.)
+  function badgeTime(n) { return n.created_at || n.captured_at || ''; }
+  function badgeMine(n) { return n.user_id && state.uid && n.user_id === state.uid; }
+  function updateBadge() {
+    if (!('setAppBadge' in navigator)) return;
+    var seen = ''; try { seen = localStorage.getItem('travel_last_seen') || ''; } catch (e) {}
+    var unread = (state.remote || []).filter(function (n) { return !badgeMine(n) && badgeTime(n) > seen; }).length;
+    try { if (unread > 0) navigator.setAppBadge(unread); else navigator.clearAppBadge(); } catch (e) {}
+  }
+  function markSeen() {
+    var max = ''; (state.remote || []).forEach(function (n) { var tt = badgeTime(n); if (tt > max) max = tt; });
+    try { localStorage.setItem('travel_last_seen', max || nowISO()); } catch (e) {}
+    if ('clearAppBadge' in navigator) { try { navigator.clearAppBadge(); } catch (e) {} }
+  }
+
   // ---------------------------------------------------------------- boot
   function scheduleSync() { updateSyncStatus(); syncNow(); }
   function mount() { document.querySelectorAll('.day').forEach(buildDayUI); renderAll(); }
@@ -906,6 +924,9 @@
   function initOnce() {
     if (state.booted) return;
     state.booted = true;
+    // Baseline "seen" at first ever launch so existing entries don't all badge.
+    try { if (!localStorage.getItem('travel_last_seen')) localStorage.setItem('travel_last_seen', nowISO()); } catch (e) {}
+    document.addEventListener('visibilitychange', function () { if (document.hidden) markSeen(); else updateBadge(); });
     migratePeople();
     wireDelegation();
     initSupabase();

@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v33';
+const CACHE = 'outback-loop-v34';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
 const ASSETS = [
   './index.html',
@@ -29,13 +29,41 @@ const ASSETS = [
   './icon-512.png'
 ];
 
+// Destination photos — pre-cached on install so they're available offline
+// before hitting the no-signal stretches (Mereenie Loop, West Macs, deserts).
+// Keep in sync with the photo URLs in enrichdata.js.
+const PHOTO_ASSETS = [
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/2020-10-08_Taronga_Western_Plains_Zoo.jpg/960px-2020-10-08_Taronga_Western_Plains_Zoo.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Aerial_view_of_Cobar%2CNew_South_Wales%2C_2009-03-06.jpg/960px-Aerial_view_of_Cobar%2CNew_South_Wales%2C_2009-03-06.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Broken_Hill_Town_%26_Line_of_Lode_Pano%2C_NSW%2C_08.07.2007.jpg/960px-Broken_Hill_Town_%26_Line_of_Lode_Pano%2C_NSW%2C_08.07.2007.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/SilvertonCrossroads.JPG/960px-SilvertonCrossroads.JPG',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Woomera.jpg/960px-Woomera.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Coober_Pedy%2C_South_Australia_-_town.jpg/960px-Coober_Pedy%2C_South_Australia_-_town.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/ViewFromKingsCanyon.JPG/960px-ViewFromKingsCanyon.JPG',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Redbank_Gorge_-_Northern_Territory.jpeg/960px-Redbank_Gorge_-_Northern_Territory.jpeg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Ellery_Creek_Big_Hole_-_West_Macdonnell_Ranges_NT.jpg/960px-Ellery_Creek_Big_Hole_-_West_Macdonnell_Ranges_NT.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/d/d8/Alice_Springs_ridge.jpeg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Travellers_Rest%2C_Marla.jpg/960px-Travellers_Rest%2C_Marla.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Jacaranda_Time_Port_Augusta.jpg/960px-Jacaranda_Time_Port_Augusta.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Hay_Water_Tower_Art%2C_Hay%2C_New_South_Wales%2C_2022%2C_04.jpg/960px-Hay_Water_Tower_Art%2C_Hay%2C_New_South_Wales%2C_2022%2C_04.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Dee_Why_Beach%2C_Sydney_2019.jpg/960px-Dee_Why_Beach%2C_Sydney_2019.jpg'
+];
+
 self.addEventListener('install', function (e) {
   self.skipWaiting();
-  e.waitUntil(
+  e.waitUntil(Promise.all([
     caches.open(CACHE).then(function (c) {
       return Promise.allSettled(ASSETS.map(function (a) { return c.add(a); }));
+    }),
+    // Pre-cache destination photos into the persistent image cache (best-effort;
+    // cross-origin so fetched no-cors and stored as opaque responses).
+    caches.open(IMG_CACHE).then(function (c) {
+      return Promise.allSettled(PHOTO_ASSETS.map(function (u) {
+        var req = new Request(u, { mode: 'no-cors' });
+        return fetch(req).then(function (r) { if (r) return c.put(req, r); });
+      }));
     })
-  );
+  ]));
 });
 
 self.addEventListener('activate', function (e) {
