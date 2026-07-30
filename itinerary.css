@@ -420,6 +420,33 @@ body{overscroll-behavior-y:contain;}
 :root[data-theme="dark"] .place-feat{background:#3A2E1E; border-color:var(--line-strong); color:var(--ochre-deep);}
 :root[data-theme="dark"] .day.camp .place-feat{background:#3E3016;}
 :root[data-theme="dark"] img{filter:brightness(.92);}
+/* Dark mode: repaint every panel that hardcodes a light (camp-cream) background,
+   otherwise the now-light text lands on a pale surface and is unreadable. */
+:root[data-theme="dark"] .day.camp .drive,
+:root[data-theme="dark"] .day.camp .chip,
+:root[data-theme="dark"] .day.camp .daymap,
+:root[data-theme="dark"] .day.camp .note-card,
+:root[data-theme="dark"] .day.camp .coverage,
+:root[data-theme="dark"] .day.camp .rt-where,
+:root[data-theme="dark"] .day.camp details.ex{background:#2b2113; border-color:var(--camp-line);}
+:root[data-theme="dark"] .day.focus.camp{background:#241c10;}
+:root[data-theme="dark"] .day.camp .dnum .n,
+:root[data-theme="dark"] .day.camp .hl{background:#3a2e15; color:var(--camp-ink);}
+:root[data-theme="dark"] .ms-chip.on{background:#2b2113; color:var(--ink);}
+:root[data-theme="dark"] .day-warn{background:#2f2410; border-color:var(--camp-line);}
+:root[data-theme="dark"] .drive-link{background:#2b2113; border-color:var(--camp-line);}
+:root[data-theme="dark"] .drive-link:hover{background:#352815;}
+:root[data-theme="dark"] .pill.camp{color:#2a1e08;}
+/* Coverage badges: light-on-tint dark text → readable light text on dark tint. */
+:root[data-theme="dark"] .cov-good{background:rgba(147,169,114,.16); color:#B9CE9C;}
+:root[data-theme="dark"] .cov-good .cov-lvl{color:#93A972;}
+:root[data-theme="dark"] .cov-patchy{background:rgba(224,152,46,.20); color:#E8B65C;}
+:root[data-theme="dark"] .cov-patchy .cov-lvl{color:#E8B65C;}
+:root[data-theme="dark"] .cov-none{background:rgba(200,116,74,.22); color:#E6A483;}
+:root[data-theme="dark"] .cov-none .cov-lvl{color:#E6A483;}
+/* Note badges that hardcode pale chips. */
+:root[data-theme="dark"] .note-badge.pending{background:#3a2e15; color:var(--camp-ink); border-color:var(--camp-line);}
+:root[data-theme="dark"] .note-badge.tr{background:#26302a; color:#B9CE9C; border-color:#3a4a34;}
 
 /* ---- Stargazing card (camp nights): moon phase, darkness, sky events ---- */
 .stargaze{margin:12px 0; padding:13px 15px; border-radius:12px; color:#ECE7FF;
