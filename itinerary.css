@@ -379,7 +379,7 @@ body{overscroll-behavior-y:contain;}
 .notify-btn[data-state="blocked"]{opacity:.5;}
 
 .app-ver{text-align:center; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.05em;
-  color:var(--faint); padding:6px 0 18px;}
+  color:var(--faint); padding:2px 0 0;}
 
 .welcome-overlay{align-items:center;}
 .welcome-panel{max-width:460px;}
