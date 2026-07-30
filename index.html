@@ -77,6 +77,7 @@ if ('serviceWorker' in navigator) {
     if (e.data && e.data.type === 'version' && _v) _v.textContent = String(e.data.version || '').replace('outback-loop-', '');
   });
   navigator.serviceWorker.ready.then(function (reg) {
+    try { reg.update(); } catch (e) {}   // force an update check on every open
     var sw = reg.active || navigator.serviceWorker.controller;
     if (sw) sw.postMessage('version');
   });
