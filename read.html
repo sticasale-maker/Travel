@@ -34,6 +34,8 @@
     <span data-i18n="reader_note_body"></span>
   </div>
 
+  <div class="app-ver" id="app-ver"></div>
+
 </div>
 
 <script>window.TRAVEL_MODE = 'reader';</script>
@@ -54,5 +56,17 @@
 <script src="welcome.js"></script>
 <script src="pull.js"></script>
 <script src="notify.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  var _v = document.getElementById('app-ver');
+  navigator.serviceWorker.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'version' && _v) _v.textContent = String(e.data.version || '').replace('outback-loop-', '');
+  });
+  navigator.serviceWorker.ready.then(function (reg) {
+    var sw = reg.active || navigator.serviceWorker.controller;
+    if (sw) sw.postMessage('version');
+  });
+}
+</script>
 </body>
 </html>

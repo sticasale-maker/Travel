@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v39';
+const CACHE = 'outback-loop-v40';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
 const ASSETS = [
   './index.html',
@@ -146,6 +146,11 @@ self.addEventListener('fetch', function (e) {
       }).catch(function () { return cached; });
     })
   );
+});
+
+// Report the running version so the app can display it (to confirm updates).
+self.addEventListener('message', function (e) {
+  if (e.data === 'version' && e.source) e.source.postMessage({ type: 'version', version: CACHE });
 });
 
 // ---- Web Push: show a notification for new journal posts ----

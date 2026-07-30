@@ -45,6 +45,8 @@
     </div>
   </footer>
 
+  <div class="app-ver" id="app-ver"></div>
+
 </div>
 
 <script>window.TRAVEL_MODE = 'poster';</script>
@@ -69,6 +71,14 @@
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+  var _v = document.getElementById('app-ver');
+  navigator.serviceWorker.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'version' && _v) _v.textContent = String(e.data.version || '').replace('outback-loop-', '');
+  });
+  navigator.serviceWorker.ready.then(function (reg) {
+    var sw = reg.active || navigator.serviceWorker.controller;
+    if (sw) sw.postMessage('version');
   });
 }
 </script>

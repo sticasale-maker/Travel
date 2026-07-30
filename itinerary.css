@@ -378,6 +378,9 @@ body{overscroll-behavior-y:contain;}
 .notify-btn[data-state="on"]{color:#fff; border-color:var(--ochre); background:var(--ochre);}
 .notify-btn[data-state="blocked"]{opacity:.5;}
 
+.app-ver{text-align:center; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.05em;
+  color:var(--faint); padding:6px 0 18px;}
+
 .welcome-overlay{align-items:center;}
 .welcome-panel{max-width:460px;}
 .welcome-lang{display:flex; gap:6px; margin:2px 0 12px;}
