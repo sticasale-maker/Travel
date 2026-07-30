@@ -178,6 +178,68 @@
     });
   }
 
+  // ---- stargazing (moon phase + sky darkness) for camp nights ------------
+  var MOON_EMOJI = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+  var MOON_EN = ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous',
+    'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'];
+  var MOON_IT = ['Luna nuova', 'Falce crescente', 'Primo quarto', 'Gibbosa crescente',
+    'Luna piena', 'Gibbosa calante', 'Ultimo quarto', 'Falce calante'];
+  // Approximate moon phase for the evening (~20:00 local) of the given date.
+  function moon(dateStr) {
+    var d = new Date(dateStr + 'T20:00:00');
+    var synodic = 29.530588853;
+    var ref = Date.UTC(2000, 0, 6, 18, 14, 0);   // a known new moon (2000-01-06)
+    var frac = ((d.getTime() - ref) / 86400000) / synodic;
+    frac = frac - Math.floor(frac);              // 0..1 through the lunar cycle
+    return { frac: frac, illum: (1 - Math.cos(2 * Math.PI * frac)) / 2 };
+  }
+  function darkness(illum) {
+    if (illum < 0.15) return { lvl: 1, en: 'Superb — near-new moon, pitch-black sky, Milky Way blazing', it: 'Eccezionale — quasi luna nuova, cielo nerissimo, Via Lattea splendente' };
+    if (illum < 0.45) return { lvl: 2, en: 'Excellent — dark skies, great for stars', it: 'Ottimo — cieli bui, perfetti per le stelle' };
+    if (illum < 0.72) return { lvl: 3, en: 'Good — some moonlight about', it: 'Buono — un po’ di chiaro di luna' };
+    return { lvl: 4, en: 'Bright moon — faint stars washed out (fine for moonlit views)', it: 'Luna intensa — stelle deboli sbiadite (bello il paesaggio illuminato)' };
+  }
+  // Celestial events worth looking up for, dated to the trip window (late Jul –
+  // mid Aug 2026) and framed for the Southern Hemisphere / outback dark skies.
+  var SKY_EVENTS = [
+    { from: '2026-07-31', to: '2026-08-13', emoji: '🌌',
+      en: 'Milky Way core straight overhead after dark — winter is the best time to see it',
+      it: 'Il cuore della Via Lattea allo zenit dopo il tramonto — l’inverno è il periodo migliore' },
+    { from: '2026-07-31', to: '2026-08-20', emoji: '☄️',
+      en: 'Southern δ-Aquariid meteors — a steady shower, superb from the outback',
+      it: 'Meteore δ-Aquaridi del Sud — sciame costante, spettacolare nell’outback' },
+    { from: '2026-07-31', to: '2026-08-15', emoji: '🔥',
+      en: 'α-Capricornid meteors — only a few an hour, but slow, bright fireballs',
+      it: 'Meteore α-Capricornidi — poche all’ora, ma lente e luminose' },
+    { from: '2026-08-09', to: '2026-08-13', emoji: '🌠',
+      en: 'Perseids building to their 12–13 Aug peak — low on the northern horizon before dawn from here',
+      it: 'Perseidi verso il picco del 12–13 ago — basse sull’orizzonte nord prima dell’alba da qui' },
+    { from: '2026-07-31', to: '2026-08-13', emoji: '🪐',
+      en: 'Saturn well up by late evening — a small telescope shows its rings',
+      it: 'Saturno alto a tarda sera — un piccolo telescopio ne mostra gli anelli' }
+  ];
+  function eventsFor(dateStr) {
+    return SKY_EVENTS.filter(function (e) { return dateStr >= e.from && dateStr <= e.to; });
+  }
+  function starHTML(dateStr) {
+    var m = moon(dateStr), idx = Math.floor(m.frac * 8 + 0.5) % 8;
+    var dk = darkness(m.illum), pct = Math.round(m.illum * 100);
+    var evs = eventsFor(dateStr);
+    var evHTML = evs.length ? '<ul class="sg-events">' + evs.map(function (e) {
+      return '<li><span class="sg-ev-ic">' + e.emoji + '</span>' + esc(it() ? e.it : e.en) + '</li>';
+    }).join('') + '</ul>' : '';
+    return '<div class="stargaze sg-l' + dk.lvl + '">' +
+      '<div class="sg-head">' +
+        '<div class="sg-moon">' + MOON_EMOJI[idx] + '</div>' +
+        '<div class="sg-main">' +
+          '<div class="sg-title">' + esc(t('star_title')) + '</div>' +
+          '<div class="sg-sub">' + esc(it() ? MOON_IT[idx] : MOON_EN[idx]) + ' · ' + pct + '% ' + esc(t('star_lit')) + '</div>' +
+          '<div class="sg-dark">' + esc(it() ? dk.it : dk.en) + '</div>' +
+        '</div>' +
+      '</div>' + evHTML +
+      '</div>';
+  }
+
   // ---- render -------------------------------------------------------------
   function photoHTML(p) {
     var cap = esc(p.credit || '') + (p.license ? ' · ' + esc(p.license) : '');
@@ -264,6 +326,7 @@
       var html = '';
       if (d.photo) html += photoHTML(d.photo);
       if (d.warn) html += warnHTML(d.warn);
+      if (day.classList.contains('camp')) html += starHTML(day.dataset.date);
       if (d.coverage) html += coverageHTML(d.coverage);
       if (d.link) html += linkHTML(d.link);
       var todo = d.todo || [], food = d.food || [];

@@ -381,6 +381,63 @@ body{overscroll-behavior-y:contain;}
 .app-ver{text-align:center; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.05em;
   color:var(--faint); padding:2px 0 0;}
 
+/* ---- Appearance settings: gear + popover ---- */
+.settings-host{position:relative; display:inline-flex; align-items:center;}
+.set-gear{background:none; border:0; cursor:pointer; font-size:15px; line-height:1; padding:2px 4px;}
+.set-gear:active{transform:scale(.92);}
+.set-pop{position:absolute; top:28px; right:0; z-index:40; width:214px; padding:12px 13px;
+  background:var(--paper); color:var(--ink); border:1px solid var(--line-strong); border-radius:12px;
+  box-shadow:0 14px 36px -12px rgba(0,0,0,.45); font-family:'Inter',system-ui,sans-serif;
+  letter-spacing:normal; text-transform:none;}
+.set-pop[hidden]{display:none;}
+.set-row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:7px 0;}
+.set-lbl{font-size:12.5px; color:var(--muted); font-weight:500;}
+.seg{display:inline-flex; border:1px solid var(--line-strong); border-radius:8px; overflow:hidden;}
+.seg button{background:var(--paper-2); border:0; border-left:1px solid var(--line-strong);
+  padding:6px 10px; font-size:13px; cursor:pointer; color:var(--ink); line-height:1;}
+.seg button:first-child{border-left:0;}
+.seg button.on{background:var(--ochre); color:#fff;}
+.seg-size button:nth-child(1){font-size:11px;} .seg-size button:nth-child(2){font-size:14px;}
+.seg-size button:nth-child(3){font-size:17px;}
+
+/* ---- Bigger text / accessibility: scale the whole content uniformly ---- */
+:root[data-textsize="large"]  .wrap{zoom:1.15;}
+:root[data-textsize="larger"] .wrap{zoom:1.32;}
+
+/* ---- Dark mode (auto day/night, or forced light/dark) ---- */
+:root[data-theme="dark"]{
+  --sand:#15110d; --paper:#221b15; --paper-2:#1b1510; --paper-3:#271f17;
+  --ink:#ECE3D4; --muted:#B5A894; --faint:#8A7C69;
+  --ochre:#D9884C; --ochre-deep:#EBA268;
+  --spinifex:#93A972; --teal:#54B9A6;
+  --camp-bg:#2A2012; --camp-line:#8A6A2A; --camp-ink:#E9CB80;
+  --focus:#D9884C; --focus-bg:#2A2018;
+  --line:#362c21; --line-strong:#4A3B2B;
+}
+:root[data-theme="dark"] body{background:#15110d;}
+:root[data-theme="dark"] body::before{opacity:.10;}
+:root[data-theme="dark"] .banner{background:#0e0b08; color:#ECE3D4;}
+:root[data-theme="dark"] .place-feat{background:#3A2E1E; border-color:var(--line-strong); color:var(--ochre-deep);}
+:root[data-theme="dark"] .day.camp .place-feat{background:#3E3016;}
+:root[data-theme="dark"] img{filter:brightness(.92);}
+
+/* ---- Stargazing card (camp nights): moon phase, darkness, sky events ---- */
+.stargaze{margin:12px 0; padding:13px 15px; border-radius:12px; color:#ECE7FF;
+  background:radial-gradient(120% 140% at 85% -10%, #2c2668 0%, #1a1c3e 55%, #12142e 100%);
+  border:1px solid #3b3670; box-shadow:inset 0 0 34px rgba(120,120,220,.14);}
+.sg-head{display:flex; gap:13px; align-items:center;}
+.sg-moon{font-size:34px; line-height:1; flex:none; filter:drop-shadow(0 0 7px rgba(255,238,200,.5));}
+.sg-title{font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:.15em;
+  text-transform:uppercase; color:#B7ACEB;}
+.sg-sub{font-size:14px; font-weight:600; margin:2px 0 1px; color:#F3EFFF;}
+.sg-dark{font-size:12.5px; color:#CFC7F0;}
+.stargaze.sg-l1 .sg-dark{color:#9CE7BC;} .stargaze.sg-l2 .sg-dark{color:#BEE6C8;}
+.stargaze.sg-l4 .sg-dark{color:#F3C48A;}
+.sg-events{list-style:none; margin:11px 0 0; padding:11px 0 0; border-top:1px solid rgba(160,150,220,.22);
+  display:flex; flex-direction:column; gap:6px;}
+.sg-events li{font-size:12.5px; line-height:1.45; color:#DCD6F4; display:flex; gap:8px; align-items:flex-start;}
+.sg-ev-ic{flex:none; font-size:14px; line-height:1.3;}
+
 .welcome-overlay{align-items:center;}
 .welcome-panel{max-width:460px;}
 .welcome-lang{display:flex; gap:6px; margin:2px 0 12px;}

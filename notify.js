@@ -94,6 +94,23 @@
     enable();
   }
 
+  // Default everyone to subscribed: browsers won't let us subscribe silently
+  // (and iOS only allows the permission prompt from a user gesture), so on the
+  // visitor's FIRST interaction we request permission and subscribe — unless
+  // they've already decided or explicitly turned notifications off. Only prompts
+  // once per load, so it never nags.
+  function autoEnroll() {
+    if (!SUPPORTED || !CFG.VAPID_PUBLIC_KEY) return;
+    if (Notification.permission !== 'default' || optedOut()) return;
+    var evs = ['pointerdown', 'touchend', 'click', 'keydown'], done = false;
+    function stop() { evs.forEach(function (ev) { document.removeEventListener(ev, go, true); }); }
+    function go() {
+      if (done) return; done = true; stop();
+      if (Notification.permission === 'default' && !optedOut()) enable();
+    }
+    evs.forEach(function (ev) { document.addEventListener(ev, go, true); });
+  }
+
   function init() {
     btn = document.getElementById('notify-btn');
     if (!btn) return;
@@ -101,6 +118,7 @@
     btn.innerHTML = BELL;
     btn.addEventListener('click', onClick);
     refresh();
+    autoEnroll();
     if (I18N && I18N.onChange) I18N.onChange(function () { if (btn && btn.dataset.state) setState(btn.dataset.state); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
