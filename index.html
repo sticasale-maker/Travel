@@ -25,6 +25,7 @@
     <span id="banner-text" data-i18n="loading">Loading today…</span>
     <span class="banner-right">
       <span class="profile-chip" id="profile-chip" style="display:none"></span>
+      <button class="notify-btn" id="notify-btn" type="button" style="display:none"></button>
       <span class="lang-toggle" id="lang-toggle"></span>
       <span class="sync-status" id="sync-status"><span class="dot"></span></span>
       <a id="jump" style="display:none"></a>
@@ -63,6 +64,7 @@
 <script src="enrich.js"></script>
 <script src="welcome.js"></script>
 <script src="pull.js"></script>
+<script src="notify.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {

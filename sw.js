@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v34';
+const CACHE = 'outback-loop-v35';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
 const ASSETS = [
   './index.html',
@@ -22,6 +22,7 @@ const ASSETS = [
   './enrich.js',
   './welcome.js',
   './pull.js',
+  './notify.js',
   './config.js',
   './vendor/supabase.js',
   './manifest.webmanifest',
@@ -143,6 +144,36 @@ self.addEventListener('fetch', function (e) {
         }
         return r;
       }).catch(function () { return cached; });
+    })
+  );
+});
+
+// ---- Web Push: show a notification for new journal posts ----
+self.addEventListener('push', function (e) {
+  var data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) { data = { body: e.data && e.data.text() }; }
+  var title = data.title || 'Insane Red Centre Loop';
+  var opts = {
+    body: data.body || 'New memory posted',
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    tag: data.tag || 'new-post',
+    renotify: true,
+    data: { url: data.url || './index.html' }
+  };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var url = (e.notification.data && e.notification.data.url) || './index.html';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i];
+        if ('focus' in c) { c.navigate && c.navigate(url); return c.focus(); }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
     })
   );
 });

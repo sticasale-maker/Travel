@@ -208,6 +208,29 @@ create policy "reply_likes remove" on public.reply_likes for delete using (true)
 drop policy if exists "replies delete" on public.note_replies;
 create policy "replies delete" on public.note_replies for delete using (true);
 
+-- ---------------------------------------------------------------------------
+-- Web Push subscriptions — read only by the notify-new-post edge function
+-- (which uses the service-role key and bypasses RLS). Clients only add/remove
+-- their own; nobody can read the table with the public key.
+-- ---------------------------------------------------------------------------
+create table if not exists public.push_subscriptions (
+  endpoint    text primary key,
+  p256dh      text not null,
+  auth        text not null,
+  person_key  text default '',        -- subscriber's person id ('' for followers) — used to skip the poster
+  label       text default '',
+  updated_at  timestamptz not null default now()
+);
+alter table public.push_subscriptions enable row level security;
+drop policy if exists "push read"   on public.push_subscriptions;
+create policy "push read"   on public.push_subscriptions for select using (false);
+drop policy if exists "push add"    on public.push_subscriptions;
+create policy "push add"    on public.push_subscriptions for insert with check (true);
+drop policy if exists "push edit"   on public.push_subscriptions;
+create policy "push edit"   on public.push_subscriptions for update using (true) with check (true);
+drop policy if exists "push remove" on public.push_subscriptions;
+create policy "push remove" on public.push_subscriptions for delete using (true);
+
 -- ============================================================================
 -- STILL TO DO in the dashboard (not SQL):
 --   Authentication → Providers (or Sign In / Providers) → enable
