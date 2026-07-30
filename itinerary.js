@@ -76,19 +76,36 @@
     var m = (location.hash || '').match(/d=(\d{4}-\d{2}-\d{2})/);
     return m ? jumpToDay(m[1]) : false;
   }
-  function jumpFromCache() {
+  function clearNavTarget() {
+    if ('caches' in window) caches.open('nav-target').then(function (c) { c.delete('t'); }).catch(function () {});
+  }
+  // Read the day the SW stashed on notification tap and jump to it. Retries a
+  // few times because the app can become visible before the cache write lands,
+  // and because iOS often resumes a suspended PWA without redelivering the SW
+  // message — so this (not the postMessage) is the reliable path on iOS.
+  function jumpFromCache(retries) {
     if (!('caches' in window)) return;
+    if (typeof retries !== 'number') retries = 2;
     caches.open('nav-target').then(function (c) {
       return c.match('t').then(function (r) {
-        if (!r) return;
-        return r.text().then(function (day) { if (day && jumpToDay(day)) c.delete('t'); });
+        if (!r) { if (retries > 0) setTimeout(function () { jumpFromCache(retries - 1); }, 300); return; }
+        return r.text().then(function (day) {
+          if (day && jumpToDay(day)) c.delete('t');
+          else if (retries > 0) setTimeout(function () { jumpFromCache(retries - 1); }, 300);
+        });
       });
     }).catch(function () {});
   }
   window.addEventListener('hashchange', jumpToHash);
+  // When the app is brought back to the foreground (tapped notification, app
+  // switcher), re-check the stashed target — covers the resumed-PWA case.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') jumpFromCache(3);
+  });
+  window.addEventListener('pageshow', function () { jumpFromCache(2); });
   if (navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener('message', function (e) {
-      if (e.data && e.data.type === 'go-day' && e.data.day) jumpToDay(e.data.day);
+      if (e.data && e.data.type === 'go-day' && e.data.day) { jumpToDay(e.data.day); clearNavTarget(); }
     });
   }
 
