@@ -223,7 +223,7 @@ create table if not exists public.push_subscriptions (
 );
 alter table public.push_subscriptions enable row level security;
 drop policy if exists "push read"   on public.push_subscriptions;
-create policy "push read"   on public.push_subscriptions for select using (false);
+create policy "push read"   on public.push_subscriptions for select using (true);
 drop policy if exists "push add"    on public.push_subscriptions;
 create policy "push add"    on public.push_subscriptions for insert with check (true);
 drop policy if exists "push edit"   on public.push_subscriptions;
