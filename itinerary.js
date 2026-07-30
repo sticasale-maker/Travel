@@ -6,6 +6,9 @@
   var MOUNT = document.getElementById('itinerary-mount');
   var I18N = window.I18N;
 
+  // Temporary on-screen readout to diagnose notification deep-linking on iOS.
+  function dbg(m) { try { var e = document.getElementById('dl-dbg'); if (e) e.textContent = 'dl: ' + m; } catch (_) {} }
+
   function runFocus() {
     var days = Array.prototype.slice.call(document.querySelectorAll('.day'));
     var bText = document.getElementById('banner-text');
@@ -66,10 +69,11 @@
   // stashes in a cache on tap, and listen for a message from the SW.
   function jumpToDay(date) {
     var el = document.querySelector('.day[data-date="' + date + '"]');
-    if (!el) return false;
+    if (!el) { dbg('no card for ' + date); return false; }
     Array.prototype.forEach.call(document.querySelectorAll('.day'), function (x) { x.classList.remove('focus'); });
     el.classList.add('focus');
     setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200);
+    dbg('jumped ' + date);
     return true;
   }
   function jumpToHash() {
@@ -103,9 +107,14 @@
     if (document.visibilityState === 'visible') jumpFromCache(3);
   });
   window.addEventListener('pageshow', function () { jumpFromCache(2); });
+  window.addEventListener('focus', function () { jumpFromCache(1); });
+  // Ultimate fallback: iOS sometimes resumes a PWA without firing ANY of the
+  // above and without redelivering the SW message. Poll the stashed target
+  // while visible; jumpFromCache deletes it once consumed, so this is idempotent.
+  setInterval(function () { if (document.visibilityState === 'visible') jumpFromCache(0); }, 1500);
   if (navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener('message', function (e) {
-      if (e.data && e.data.type === 'go-day' && e.data.day) { jumpToDay(e.data.day); clearNavTarget(); }
+      if (e.data && e.data.type === 'go-day' && e.data.day) { dbg('msg go-day ' + e.data.day); jumpToDay(e.data.day); clearNavTarget(); }
     });
   }
 
