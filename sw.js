@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v38';
+const CACHE = 'outback-loop-v39';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
 const ASSETS = [
   './index.html',
@@ -167,13 +167,24 @@ self.addEventListener('push', function (e) {
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   var url = (e.notification.data && e.notification.data.url) || './index.html';
-  e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+  var m = url.match(/d=(\d{4}-\d{2}-\d{2})/);
+  var day = m ? m[1] : '';
+  // Stash the target day so the app can jump to it on open, even if iOS ignores
+  // the notification's URL and launches the app at its start page.
+  var stash = day
+    ? caches.open('nav-target').then(function (c) { return c.put('t', new Response(day)); }).catch(function () {})
+    : Promise.resolve();
+  e.waitUntil(stash.then(function () {
+    return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
       for (var i = 0; i < list.length; i++) {
         var c = list[i];
-        if ('focus' in c) { c.navigate && c.navigate(url); return c.focus(); }
+        if ('focus' in c) {
+          if (c.navigate) { try { c.navigate(url); } catch (_) {} }
+          try { c.postMessage({ type: 'go-day', day: day }); } catch (_) {}
+          return c.focus();
+        }
       }
       if (self.clients.openWindow) return self.clients.openWindow(url);
-    })
-  );
+    });
+  }));
 });

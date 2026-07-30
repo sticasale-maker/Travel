@@ -61,18 +61,36 @@
     }
   }
 
-  // Deep-link from a push notification: a #d=YYYY-MM-DD hash jumps to that day.
-  function jumpToHash() {
-    var m = (location.hash || '').match(/d=(\d{4}-\d{2}-\d{2})/);
-    if (!m) return false;
-    var el = document.querySelector('.day[data-date="' + m[1] + '"]');
+  // Deep-link from a push notification to a specific day. iOS often ignores the
+  // notification's target URL, so we also read a target the service worker
+  // stashes in a cache on tap, and listen for a message from the SW.
+  function jumpToDay(date) {
+    var el = document.querySelector('.day[data-date="' + date + '"]');
     if (!el) return false;
     Array.prototype.forEach.call(document.querySelectorAll('.day'), function (x) { x.classList.remove('focus'); });
     el.classList.add('focus');
     setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200);
     return true;
   }
+  function jumpToHash() {
+    var m = (location.hash || '').match(/d=(\d{4}-\d{2}-\d{2})/);
+    return m ? jumpToDay(m[1]) : false;
+  }
+  function jumpFromCache() {
+    if (!('caches' in window)) return;
+    caches.open('nav-target').then(function (c) {
+      return c.match('t').then(function (r) {
+        if (!r) return;
+        return r.text().then(function (day) { if (day && jumpToDay(day)) c.delete('t'); });
+      });
+    }).catch(function () {});
+  }
   window.addEventListener('hashchange', jumpToHash);
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener('message', function (e) {
+      if (e.data && e.data.type === 'go-day' && e.data.day) jumpToDay(e.data.day);
+    });
+  }
 
   function load(lang) {
     return fetch('itinerary.' + lang + '.html', { cache: 'no-cache' })
@@ -81,6 +99,7 @@
         MOUNT.innerHTML = html;
         runFocus();
         jumpToHash();
+        jumpFromCache();
         document.dispatchEvent(new CustomEvent('itinerary:ready'));
       })
       .catch(function () {
