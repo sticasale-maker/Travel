@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v40';
+const CACHE = 'outback-loop-v41';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
 const ASSETS = [
   './index.html',
@@ -155,11 +155,21 @@ self.addEventListener('message', function (e) {
 
 // ---- Web Push: show a notification for new journal posts ----
 self.addEventListener('push', function (e) {
+  var raw = '', parseErr = '';
+  try { raw = e.data ? e.data.text() : ''; } catch (x) { parseErr = 'text-failed'; }
   var data = {};
-  try { data = e.data ? e.data.json() : {}; } catch (err) { data = { body: e.data && e.data.text() }; }
+  if (raw) { try { data = JSON.parse(raw); } catch (x) { parseErr = 'json-failed'; } }
+
   var title = data.title || 'Insane Red Centre Loop';
+  var body = data.body || 'New memory posted';
+  // Diagnostic: if the payload carried no usable content, surface *why* on the
+  // banner itself (empty push vs. unparseable) so we can see what iOS receives.
+  if (!data.title && !data.body) {
+    title = 'DBG ' + (raw ? ('payload ' + raw.length + 'B') : 'NO-PAYLOAD');
+    body = parseErr ? ('parse: ' + parseErr) : (raw ? raw.slice(0, 120) : 'push arrived with no data');
+  }
   var opts = {
-    body: data.body || 'New memory posted',
+    body: body,
     icon: './icon-192.png',
     badge: './icon-192.png',
     tag: data.tag || 'new-post',
