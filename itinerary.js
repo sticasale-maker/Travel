@@ -45,9 +45,11 @@
         jump.style.display = 'inline';
         jump.onclick = function () { focusEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
       }
-      setTimeout(function () {
-        focusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 350);
+      if (!/[#&]d=\d{4}-\d{2}-\d{2}/.test(location.hash)) {
+        setTimeout(function () {
+          focusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 350);
+      }
     } else if (today < start) {
       var n = Math.round((start - today) / 86400000);
       setBanner(I18N.t(n === 1 ? 'banner_starts_one' : 'banner_starts_many', { date: fmt(start), n: n }));
@@ -59,12 +61,26 @@
     }
   }
 
+  // Deep-link from a push notification: a #d=YYYY-MM-DD hash jumps to that day.
+  function jumpToHash() {
+    var m = (location.hash || '').match(/d=(\d{4}-\d{2}-\d{2})/);
+    if (!m) return false;
+    var el = document.querySelector('.day[data-date="' + m[1] + '"]');
+    if (!el) return false;
+    Array.prototype.forEach.call(document.querySelectorAll('.day'), function (x) { x.classList.remove('focus'); });
+    el.classList.add('focus');
+    setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200);
+    return true;
+  }
+  window.addEventListener('hashchange', jumpToHash);
+
   function load(lang) {
     return fetch('itinerary.' + lang + '.html', { cache: 'no-cache' })
       .then(function (r) { return r.text(); })
       .then(function (html) {
         MOUNT.innerHTML = html;
         runFocus();
+        jumpToHash();
         document.dispatchEvent(new CustomEvent('itinerary:ready'));
       })
       .catch(function () {

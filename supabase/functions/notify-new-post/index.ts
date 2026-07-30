@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
   const notification = JSON.stringify({
     title: `${author} · ${dest}`,   // e.g. "Marco · Coober Pedy"
     body,
-    url: APP_URL,
+    url: APP_URL + "#d=" + rec.day_key,   // deep-link: opens the app at that day
     tag: "new-post",
   });
 
