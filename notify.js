@@ -51,7 +51,12 @@
   function currentSub() { return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }); }
   function refresh() {
     if (Notification.permission === 'denied') { setState('blocked'); return; }
-    currentSub().then(function (sub) { setState(sub ? 'on' : 'off'); }).catch(function () { setState('off'); });
+    currentSub().then(function (sub) {
+      // self-heal: if we're subscribed, make sure the row is in the DB (idempotent
+      // upsert) — covers a failed/partial first save.
+      if (sub) { storeSub(sub).catch(function () {}); setState('on'); }
+      else setState('off');
+    }).catch(function () { setState('off'); });
   }
 
   function enable() {
