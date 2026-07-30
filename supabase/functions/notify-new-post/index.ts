@@ -1,24 +1,21 @@
-// notify-new-post — sends a Web Push to everyone (except the poster) when a new
+// notify-new-post - sends a Web Push to everyone (except the poster) when a new
 // journal entry is inserted into travel_notes. Triggered by a Supabase Database
 // Webhook on INSERT. Deploy with:  supabase functions deploy notify-new-post --no-verify-jwt
 //
-// Required secrets (supabase secrets set ...):
-//   VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT (mailto:you@example.com),
-//   HOOK_SECRET (any random string; also set as the webhook's x-hook-secret header),
-//   APP_URL (e.g. https://sticasale-maker.github.io/Travel/)
+// Required secrets: VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT (mailto:...),
+// HOOK_SECRET (also the webhook's x-hook-secret header), APP_URL.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC")!;
-const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE")!;
-const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "mailto:trip@example.com";
-const HOOK_SECRET = Deno.env.get("HOOK_SECRET") ?? "";
-const APP_URL = Deno.env.get("APP_URL") ?? "https://sticasale-maker.github.io/Travel/";
+const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC") || "";
+const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE") || "";
+const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") || "mailto:trip@example.com";
+const HOOK_SECRET = Deno.env.get("HOOK_SECRET") || "";
+const APP_URL = Deno.env.get("APP_URL") || "https://sticasale-maker.github.io/Travel/";
 
-// day_key -> destination name (keep in sync with the itinerary)
-const DEST: Record<string, string> = {
+const DEST = {
   "2026-07-31": "Dubbo", "2026-08-01": "Cobar", "2026-08-02": "Broken Hill",
   "2026-08-03": "Silverton", "2026-08-04": "Woomera", "2026-08-05": "Coober Pedy",
   "2026-08-06": "Kings Canyon", "2026-08-07": "Redbank Gorge", "2026-08-08": "Ellery Creek",
@@ -27,63 +24,61 @@ const DEST: Record<string, string> = {
 };
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
-
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+const supabase = createClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
 
 Deno.serve(async (req) => {
   if (HOOK_SECRET && req.headers.get("x-hook-secret") !== HOOK_SECRET) {
     return new Response("forbidden", { status: 403 });
   }
 
-  let payload: any = {};
-  try { payload = await req.json(); } catch (_) { /* ignore */ }
-  const rec = payload?.record ?? payload;
+  let payload = {};
+  try { payload = await req.json(); } catch (_) { payload = {}; }
+  const rec = (payload && payload.record) ? payload.record : payload;
   if (!rec || !rec.day_key) return new Response("no record", { status: 200 });
 
-  const author = (rec.author || "Someone").toString();
+  const author = String(rec.author || "Someone");
   const dest = DEST[rec.day_key] || "the trip";
-  const raw = (rec.body || rec.body_en || rec.body_it || "").toString().trim();
+  const raw = String(rec.body || rec.body_en || rec.body_it || "").trim();
   const nPhotos = Array.isArray(rec.photo_paths) ? rec.photo_paths.length : 0;
   const hasAudio = !!rec.audio_path;
-  let body: string;
-  if (raw) body = raw.length > 90 ? raw.slice(0, 89) + "…" : raw;
-  else if (nPhotos) body = nPhotos > 1 ? `📷 ${nPhotos} photos` : "📷 A photo";
-  else if (hasAudio) body = "🎙️ A voice note";
-  else body = "A new memory";
-  const posterKey = (rec.person_key || "").toString();
 
-  const { data: subs, error } = await supabase.from("push_subscriptions").select("*");
-  if (error) return new Response("db error: " + error.message, { status: 500 });
+  let body = "A new memory";
+  if (raw) body = raw.length > 90 ? raw.slice(0, 89) + "\u2026" : raw;
+  else if (nPhotos) body = nPhotos > 1 ? ("\uD83D\uDCF7 " + nPhotos + " photos") : "\uD83D\uDCF7 A photo";
+  else if (hasAudio) body = "\uD83C\uDF99\uFE0F A voice note";
+
+  const posterKey = String(rec.person_key || "");
+
+  const res = await supabase.from("push_subscriptions").select("*");
+  if (res.error) return new Response("db error: " + (res.error.message || ""), { status: 500 });
+  const subs = res.data || [];
 
   const notification = JSON.stringify({
-    title: `${author} · ${dest}`,   // e.g. "Marco · Coober Pedy"
-    body,
-    url: APP_URL + "#d=" + rec.day_key,   // deep-link: opens the app at that day
+    title: author + " \u00B7 " + dest,
+    body: body,
+    url: APP_URL + "#d=" + rec.day_key,
     tag: "new-post",
   });
 
   let sent = 0, removed = 0;
-  await Promise.all((subs ?? []).map(async (s: any) => {
-    if (posterKey && s.person_key && s.person_key === posterKey) return; // don't notify the poster
+  await Promise.all(subs.map(async (s) => {
+    if (posterKey && s.person_key && s.person_key === posterKey) return;
     try {
       await webpush.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         notification,
       );
       sent++;
-    } catch (e: any) {
-      const code = e?.statusCode;
-      if (code === 404 || code === 410) { // subscription gone — clean it up
+    } catch (e) {
+      const code = e && e.statusCode;
+      if (code === 404 || code === 410) {
         await supabase.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
         removed++;
       }
     }
   }));
 
-  return new Response(JSON.stringify({ sent, removed }), {
+  return new Response(JSON.stringify({ sent: sent, removed: removed }), {
     headers: { "Content-Type": "application/json" },
   });
 });
