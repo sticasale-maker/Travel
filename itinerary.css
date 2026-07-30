@@ -375,9 +375,7 @@ body{overscroll-behavior-y:contain;}
   padding:0; border-radius:8px; border:1px solid var(--line-strong); background:var(--paper-2);
   color:var(--muted); cursor:pointer; position:relative; flex:0 0 auto; vertical-align:middle;}
 .notify-btn svg{width:17px; height:17px;}
-.notify-btn[data-state="on"]{color:var(--ochre-deep); border-color:var(--ochre); background:var(--focus-bg);}
-.notify-btn[data-state="on"]::after{content:""; position:absolute; top:3px; right:3px; width:7px; height:7px;
-  border-radius:50%; background:var(--spinifex); border:1.5px solid var(--paper);}
+.notify-btn[data-state="on"]{color:#fff; border-color:var(--ochre); background:var(--ochre);}
 .notify-btn[data-state="blocked"]{opacity:.5;}
 
 .welcome-overlay{align-items:center;}

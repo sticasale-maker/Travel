@@ -49,25 +49,39 @@
     btn.setAttribute('aria-label', btn.title);
   }
   function currentSub() { return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }); }
+  var OPTOUT = 'notify_optout';
+  function optedOut() { try { return localStorage.getItem(OPTOUT) === '1'; } catch (e) { return false; } }
+  function setOptout(v) { try { if (v) localStorage.setItem(OPTOUT, '1'); else localStorage.removeItem(OPTOUT); } catch (e) {} }
+  function doSubscribe(reg) {
+    return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(CFG.VAPID_PUBLIC_KEY) }).then(storeSub);
+  }
+
   function refresh() {
     if (Notification.permission === 'denied') { setState('blocked'); return; }
-    currentSub().then(function (sub) {
-      // self-heal: if we're subscribed, make sure the row is in the DB (idempotent
-      // upsert) — covers a failed/partial first save.
-      if (sub) { storeSub(sub).catch(function () {}); setState('on'); }
-      else setState('off');
-    }).catch(function () { setState('off'); });
+    // "On by default": once notifications are allowed on this device (and not
+    // explicitly turned off), keep it subscribed — auto-resubscribing if the
+    // subscription was lost or accidentally cleared.
+    if (Notification.permission === 'granted' && !optedOut()) {
+      navigator.serviceWorker.ready.then(function (reg) {
+        return reg.pushManager.getSubscription().then(function (sub) {
+          if (sub) { storeSub(sub).catch(function () {}); setState('on'); return; }
+          return doSubscribe(reg).then(function () { setState('on'); });
+        });
+      }).catch(function () { setState('off'); });
+      return;
+    }
+    currentSub().then(function (sub) { setState(sub ? 'on' : 'off'); }).catch(function () { setState('off'); });
   }
 
   function enable() {
+    setOptout(false);
     Notification.requestPermission().then(function (perm) {
       if (perm !== 'granted') { setState(perm === 'denied' ? 'blocked' : 'off'); return; }
-      navigator.serviceWorker.ready.then(function (reg) {
-        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(CFG.VAPID_PUBLIC_KEY) });
-      }).then(storeSub).then(function () { setState('on'); }).catch(function () { setState('off'); });
+      navigator.serviceWorker.ready.then(doSubscribe).then(function () { setState('on'); }).catch(function () { setState('off'); });
     });
   }
   function disable() {
+    setOptout(true);
     currentSub().then(function (sub) {
       if (!sub) { setState('off'); return; }
       var ep = sub.endpoint;
@@ -76,7 +90,8 @@
   }
   function onClick() {
     if (btn.dataset.state === 'blocked') { alert(t('notify_blocked_help')); return; }
-    if (btn.dataset.state === 'on') disable(); else enable();
+    if (btn.dataset.state === 'on') { if (confirm(t('notify_off_confirm'))) disable(); return; }
+    enable();
   }
 
   function init() {
