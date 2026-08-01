@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v53';
+const CACHE = 'outback-loop-v54';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
 const ASSETS = [
   './index.html',
@@ -134,7 +134,21 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  // Assets + Google Fonts: serve from cache first, then network (and cache the result).
+  // Same-origin CSS/JS: network-first so shipped changes appear immediately when
+  // online, falling back to the cached copy only when offline. Fixes the old
+  // cache-first behaviour where a new version could be reported while the page
+  // still rendered stale styles/scripts.
+  if (url.origin === location.origin && /\.(css|js)$/i.test(url.pathname)) {
+    e.respondWith(
+      fetch(req).then(function (r) {
+        if (r && r.status === 200) { var copy = r.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
+        return r;
+      }).catch(function () { return caches.match(req); })
+    );
+    return;
+  }
+
+  // Other assets + Google Fonts: serve from cache first, then network (and cache the result).
   e.respondWith(
     caches.match(req).then(function (cached) {
       return cached || fetch(req).then(function (r) {
