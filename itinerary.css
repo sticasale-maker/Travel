@@ -395,6 +395,10 @@ body{overscroll-behavior-y:contain;}
 
 .app-ver{text-align:center; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.05em;
   color:var(--faint); padding:2px 0 0;}
+/* Version tag lives inside the sticky banner so it stays visible even after the
+   app auto-scrolls to today's day. Inherits the banner's light text. */
+.ver-tag{font-family:'Space Mono',monospace; font-size:9px; letter-spacing:.05em;
+  opacity:.55; align-self:center; white-space:nowrap;}
 
 /* ---- Appearance settings: gear + popover ---- */
 .settings-host{position:relative; display:inline-flex; align-items:center;}
