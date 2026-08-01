@@ -10,6 +10,19 @@
   var SUPPORTED = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   var btn;
 
+  function isIOS() {
+    return /iP(hone|ad|od)/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
+  }
+  // iOS/iPadOS only allow web push from a Home-Screen-installed PWA (standalone),
+  // never from a Safari tab. When not standalone, requesting permission silently
+  // fails and the app never appears in Settings > Notifications.
+  function isStandalone() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      navigator.standalone === true;
+  }
+  function needsInstall() { return isIOS() && !isStandalone(); }
+
   var BELL =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
@@ -89,6 +102,7 @@
     });
   }
   function onClick() {
+    if (needsInstall()) { alert(t('notify_ios_install')); return; }
     if (btn.dataset.state === 'blocked') { alert(t('notify_blocked_help')); return; }
     if (btn.dataset.state === 'on') { if (confirm(t('notify_off_confirm'))) disable(); return; }
     enable();
@@ -101,6 +115,7 @@
   // once per load, so it never nags.
   function autoEnroll() {
     if (!SUPPORTED || !CFG.VAPID_PUBLIC_KEY) return;
+    if (needsInstall()) return;   // in Safari on iOS the prompt can't succeed — the bell tap guides instead
     if (Notification.permission !== 'default' || optedOut()) return;
     var evs = ['pointerdown', 'touchend', 'click', 'keydown'], done = false;
     function stop() { evs.forEach(function (ev) { document.removeEventListener(ev, go, true); }); }
