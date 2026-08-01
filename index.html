@@ -75,6 +75,15 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('sw.js').catch(function () {});
   });
+  // If a page already has a controller, a controllerchange means a NEW version
+  // just took over — reload once so the visible CSS/JS match the new version
+  // (otherwise the version tag can read ahead of the still-cached assets).
+  if (navigator.serviceWorker.controller) {
+    var _refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (_refreshing) return; _refreshing = true; window.location.reload();
+    });
+  }
   var _v = document.getElementById('app-ver');
   navigator.serviceWorker.addEventListener('message', function (e) {
     if (e.data && e.data.type === 'version' && _v) _v.textContent = String(e.data.version || '').replace('outback-loop-', '');

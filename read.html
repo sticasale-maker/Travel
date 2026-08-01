@@ -61,6 +61,14 @@
 <script src="notify.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
+  // Reload once when a new version takes over so the visible build matches the
+  // version tag (see index.html for the rationale).
+  if (navigator.serviceWorker.controller) {
+    var _refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (_refreshing) return; _refreshing = true; window.location.reload();
+    });
+  }
   var _v = document.getElementById('app-ver');
   navigator.serviceWorker.addEventListener('message', function (e) {
     if (e.data && e.data.type === 'version' && _v) _v.textContent = String(e.data.version || '').replace('outback-loop-', '');
