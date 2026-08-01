@@ -551,6 +551,8 @@
     if (!listEl) return;
     allNotes().then(function (locals) {
       var list = mergedForDay(dayKey, locals);
+      var bottomBtn = dayEl.querySelector('.add-note-bottom');
+      if (bottomBtn) bottomBtn.style.display = list.length ? 'flex' : 'none';
       if (!list.length) {
         listEl.innerHTML = '<div class="note-empty">' + t(MODE === 'poster' ? 'empty_poster' : 'empty_reader') + '</div>';
         return;
@@ -602,14 +604,19 @@
     wrap.className = 'notes';
     wrap.innerHTML = MODE === 'poster'
       ? '<div class="notes-head"><h4>' + esc(t('journal_title')) + '</h4>' +
-        '<button class="add-note-btn" type="button">' + esc(t('add_memory')) + '</button></div><div class="note-list"></div>'
+        '<button class="add-note-btn" type="button">' + esc(t('add_memory')) + '</button></div>' +
+        '<div class="note-list"></div>' +
+        '<button class="add-note-btn add-note-bottom" type="button" style="display:none">' + esc(t('add_memory')) + '</button>'
       : '<div class="notes-head"><h4>' + esc(t('journal_title')) + '</h4></div><div class="note-list"></div>';
     dayEl.appendChild(wrap);
-    if (MODE === 'poster') wrap.querySelector('.add-note-btn').addEventListener('click', function () {
-      // set up who you are the first time you actually post (not on page load)
-      if (!loadPeople().length) openPerson(null, function () { openForm(dayEl, dayKey, null); });
-      else openForm(dayEl, dayKey, null);
-    });
+    if (MODE === 'poster') {
+      var openNew = function () {
+        // set up who you are the first time you actually post (not on page load)
+        if (!loadPeople().length) openPerson(null, function () { openForm(dayEl, dayKey, null); });
+        else openForm(dayEl, dayKey, null);
+      };
+      wrap.querySelectorAll('.add-note-btn').forEach(function (b) { b.addEventListener('click', openNew); });
+    }
   }
 
   function openForm(dayEl, dayKey, editNote) {
