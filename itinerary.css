@@ -25,7 +25,7 @@ body::before{content:""; position:fixed; inset:0; z-index:-1; pointer-events:non
 .day.camp .place-feat{background:#F4E3B4; border-color:var(--camp-line); color:var(--camp-ink);}
 .day.focus .place-feat{background:var(--ochre); border-color:var(--ochre); color:#fff;}
 @media (max-width:520px){ .place-feat{width:36px; height:36px; margin-right:9px;} .place-feat svg{width:21px; height:21px;} }
-.wrap{max-width:820px; margin:0 auto; padding:0 18px 80px;}
+.wrap{max-width:1100px; margin:0 auto; padding:0 14px 80px;}
 a{color:var(--ochre-deep); text-decoration:underline; text-decoration-thickness:1px;
   text-underline-offset:2px; text-decoration-color:var(--line-strong);}
 a:hover{text-decoration-color:var(--ochre);}
@@ -54,8 +54,13 @@ h1 .arrow{color:var(--ochre); font-weight:400;}
 .sw{width:20px; height:13px; border-radius:3px; display:inline-block;}
 
 .day{position:relative; background:var(--paper); border:1px solid var(--line);
-  border-radius:14px; padding:16px 18px 18px; margin:12px 0; cursor:pointer;
+  border-radius:14px; padding:16px 14px 18px; margin:12px 0; cursor:pointer;
   transition:border-color .18s, box-shadow .18s, transform .18s;}
+/* Phones: shave the nested day + post padding so journal text gets max width. */
+@media (max-width:560px){
+  .day{padding-left:11px; padding-right:11px;}
+  .note-card{padding-left:10px; padding-right:10px;}
+}
 .day:hover{border-color:var(--line-strong);}
 .day.camp{background:var(--camp-bg); border-color:var(--camp-line);}
 .day.focus{border:2px solid var(--focus); background:var(--focus-bg);
