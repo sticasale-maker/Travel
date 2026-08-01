@@ -241,16 +241,16 @@ footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line-strong
    soft ochre glow. Repeated below the last post of the day. */
 .add-note-btn{font-family:'Space Mono',monospace; font-size:12px; letter-spacing:.06em;
   text-transform:uppercase; font-weight:700; color:#fff;
-  background:linear-gradient(135deg, var(--ochre) 0%, var(--ochre-deep) 100%);
+  background:linear-gradient(135deg, #E23B2E 0%, #B41E14 100%);
   border:none; border-radius:22px; padding:9px 16px 9px 11px; cursor:pointer;
   display:inline-flex; align-items:center; gap:8px;
-  box-shadow:0 4px 15px -4px rgba(182,92,36,.6), inset 0 0 0 1px rgba(255,255,255,.14);
+  box-shadow:0 4px 15px -4px rgba(196,40,26,.65), inset 0 0 0 1px rgba(255,255,255,.16);
   transition:transform .12s ease, box-shadow .18s ease;}
 .add-note-btn::before{content:"+"; font-size:16px; font-weight:700; line-height:0;
   width:20px; height:20px; flex:none; display:inline-flex; align-items:center; justify-content:center;
   background:rgba(255,255,255,.24); border-radius:50%;}
 .add-note-btn:hover{transform:translateY(-1px);
-  box-shadow:0 7px 20px -4px rgba(182,92,36,.8), inset 0 0 0 1px rgba(255,255,255,.2);}
+  box-shadow:0 7px 20px -4px rgba(196,40,26,.85), inset 0 0 0 1px rgba(255,255,255,.22);}
 .add-note-btn:active{transform:translateY(0);}
 .add-note-bottom{width:100%; justify-content:center; margin-top:14px; font-size:13px; padding:13px 18px;
   border-radius:14px;}
