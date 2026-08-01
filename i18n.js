@@ -23,6 +23,7 @@
       // journal (was "notes")
       journal_title: 'Journal',
       todo_title: 'Things to do', food_title: 'Eat & drink',
+      stay_title: 'Where you’re staying',
       flag_yes: 'Yes', flag_no: 'No',
       food_at: 'At the stop', food_route: 'Along the way',
       onway_title: 'On the way to {dest}',
@@ -101,6 +102,7 @@
       banner_today_only: 'Oggi è <b>{date}</b>',
       journal_title: 'Diario',
       todo_title: 'Cose da fare', food_title: 'Mangiare e bere',
+      stay_title: 'Dove dormite',
       flag_yes: 'Sì', flag_no: 'No',
       food_at: 'Alla tappa', food_route: 'Lungo la strada',
       onway_title: 'Lungo la strada per {dest}',

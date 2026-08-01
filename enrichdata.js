@@ -13,6 +13,7 @@ window.TRIP_ENRICH = {
   '2026-07-31': {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/2020-10-08_Taronga_Western_Plains_Zoo.jpg/960px-2020-10-08_Taronga_Western_Plains_Zoo.jpg', credit: 'Maksym Kozlenko', license: 'CC BY-SA 4.0', alt: 'Taronga Western Plains Zoo, Dubbo' },
     coverage: { telstra: 'good', optus: 'good', note: 'Both strong all the way from Sydney via Bathurst/Orange.' },
+    stay: { name: 'Savannah Cabins · Taronga Western Plains Zoo', q: 'Savannah Cabins Taronga Western Plains Zoo Dubbo', en: 'Cabin inside the zoo grounds.', it: 'Cabina all’interno dello zoo.' },
     todo: [
       { id: 'zoo-safari', cat: 'wildlife', name: 'Taronga Western Plains Zoo safari', en: 'Dawn drive-through past open-range African animals.', it: 'Safari all’alba tra animali africani in libertà.', dur: '2–3 h', q: 'Taronga Western Plains Zoo Dubbo', hours: 'Daily 9:00–16:00' },
       { id: 'old-gaol', cat: 'heritage', name: 'Old Dubbo Gaol', en: '1847 gaol — gallows, solitary cells, night tours.', it: 'Prigione del 1847 — forca, celle, tour serali.', dur: '1–2 h', q: 'Old Dubbo Gaol', hours: 'Daily 9:00–17:00' },
@@ -34,6 +35,7 @@ window.TRIP_ENRICH = {
   '2026-08-01': {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Aerial_view_of_Cobar%2CNew_South_Wales%2C_2009-03-06.jpg/960px-Aerial_view_of_Cobar%2CNew_South_Wales%2C_2009-03-06.jpg', credit: 'Andy', license: 'CC BY-SA 2.0', alt: 'Cobar, NSW from the air' },
     coverage: { telstra: 'good', optus: 'patchy', note: 'Telstra reliable in town; Optus weaker and drops outside the centre.' },
+    stay: { name: 'Cobar Caravan Park', q: 'Cobar Caravan Park', en: '2 cabins.', it: '2 cabine.' },
     todo: [
       { id: 'heritage-centre', cat: 'heritage', name: 'Great Cobar Heritage Centre', en: '1912 mine HQ, copper-mining history.', it: 'Sede mineraria del 1912, storia del rame.', dur: '1–1.5 h', q: 'Great Cobar Heritage Centre', hours: 'Mon–Fri 8:30–17:00; Sat–Sun 9:00–17:00' },
       { id: 'miners-park', cat: 'mine', name: 'Cobar Miners Heritage Park', en: 'Outdoor mining relics and memorial.', it: 'Cimeli minerari e memoriale all’aperto.', dur: '30–45 min', q: 'Cobar Miners Heritage Park', hours: '24/7' },
@@ -52,6 +54,7 @@ window.TRIP_ENRICH = {
   '2026-08-02': {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Broken_Hill_Town_%26_Line_of_Lode_Pano%2C_NSW%2C_08.07.2007.jpg/960px-Broken_Hill_Town_%26_Line_of_Lode_Pano%2C_NSW%2C_08.07.2007.jpg', credit: "Jjron (John O'Neill)", license: 'CC BY-SA 3.0', alt: 'Broken Hill and the Line of Lode' },
     coverage: { telstra: 'good', optus: 'patchy', note: 'Both work in town, Optus less reliable. The Barrier Hwy in has long dead gaps.' },
+    stay: { name: 'Palace Hotel · Priscilla Suite', q: 'Palace Hotel Broken Hill', en: 'The Priscilla Suite (2 nights).', it: 'La Priscilla Suite (2 notti).' },
     todo: [
       { id: 'living-desert', cat: 'art', name: 'Living Desert Sculptures', en: '12 hilltop sandstone artworks, best at sunset.', it: '12 sculture in arenaria su collina, top al tramonto.', dur: '1–1.5 h', q: 'Living Desert Sculptures Broken Hill', hours: 'Daily 8:30–sunset' },
       { id: 'line-of-lode', cat: 'lookout', name: 'Line of Lode Miners Memorial', en: 'Hilltop memorial and lookout over town.', it: 'Memoriale e belvedere sulla città.', dur: '45 min–1 h', q: 'Line of Lode Miners Memorial Broken Hill', hours: 'Daily 8:00–22:00' },
@@ -71,6 +74,7 @@ window.TRIP_ENRICH = {
   '2026-08-03': {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/SilvertonCrossroads.JPG/960px-SilvertonCrossroads.JPG', credit: 'Mattinbgn', license: 'CC BY-SA 3.0', alt: 'Silverton, NSW' },
     coverage: { telstra: 'patchy', optus: 'none', note: 'Weak Telstra only; Optus essentially unavailable out here.' },
+    stay: { name: 'Palace Hotel · Priscilla Suite', q: 'Palace Hotel Broken Hill', en: 'The Priscilla Suite (2nd night) — day trip to Silverton.', it: 'La Priscilla Suite (2ª notte) — gita a Silverton.' },
     todo: [
       { id: 'mundi-mundi', cat: 'lookout', name: 'Mundi Mundi Lookout', en: 'Vast plains; you can see the earth curve.', it: 'Pianura sconfinata; si vede la curvatura terrestre.', dur: '30–45 min', q: 'Mundi Mundi Lookout Silverton', hours: '24/7' },
       { id: 'madmax', cat: 'star', name: 'Mad Max 2 Museum', en: 'Costumes, cars and memorabilia from filming.', it: 'Costumi, auto e cimeli del film.', dur: '45 min–1 h', q: 'Mad Max 2 Museum Silverton', hours: 'Daily 10:00–16:00' },
@@ -89,6 +93,7 @@ window.TRIP_ENRICH = {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Woomera.jpg/960px-Woomera.jpg', credit: 'Diceman', license: 'Public domain', alt: 'Woomera rocket display' },
     warn: { en: 'Fill up on fuel & water here — long dry stretches either way.', it: 'Fate benzina e acqua qui — lunghi tratti deserti in entrambe le direzioni.' },
     coverage: { telstra: 'good', optus: 'patchy', note: 'Telstra at the roadhouse/town; Optus intermittent. Nothing between stops.' },
+    stay: { name: 'Spud’s Roadhouse · Pimba', q: "Spud's Roadhouse Pimba", en: 'Budget family room — 3 adults + 1 child.', it: 'Camera famiglia economica — 3 adulti + 1 bambino.' },
     todo: [
       { id: 'missile-park', cat: 'science', name: 'Woomera Missile Park', en: 'Free outdoor rocket & missile display.', it: 'Parco di razzi e missili all’aperto, gratis.', dur: '45 min', q: 'Woomera Missile Park South Australia', hours: '24/7' },
       { id: 'heritage-centre', cat: 'heritage', name: 'Woomera Heritage Centre', en: 'Rocket-range history, Kokatha artefacts.', it: 'Storia del poligono, reperti Kokatha.', dur: '45–60 min', q: 'Woomera Heritage and Visitor Information Centre', hours: 'Mon–Fri 6:30–15:00; Sat–Sun 7:00–15:00' },
@@ -105,6 +110,7 @@ window.TRIP_ENRICH = {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Coober_Pedy%2C_South_Australia_-_town.jpg/960px-Coober_Pedy%2C_South_Australia_-_town.jpg', credit: 'Rob Chandler', license: 'CC BY 2.0', alt: 'Coober Pedy town' },
     warn: { en: 'Good supply town — stock up food, water & fuel before the NT.', it: 'Buona città per rifornimenti — fate scorta di cibo, acqua e benzina prima del NT.' },
     coverage: { telstra: 'good', optus: 'good', note: 'Both serve the town; nothing reliable just outside it.' },
+    stay: { name: 'Desert Hideaway Underground Cave · White Cliffs', url: 'https://www.booking.com/hotel/au/desert-hideaway-underground-cave-white-cliffs.en-gb.html', q: 'Desert Hideaway Underground Cave White Cliffs NSW', en: 'Three-bedroom underground house.', it: 'Casa sotterranea con tre camere.' },
     todo: [
       { id: 'lake-hart', cat: 'lookout', name: 'Lake Hart lookout', en: 'Huge roadside salt lake, great photo stop.', it: 'Enorme lago salato, sosta foto.', dur: '20–30 min', q: 'Lake Hart Lookout Stuart Highway South Australia', hours: '24/7', where: 'Stuart Hwy', t: '0:40' },
       { id: 'old-timers', cat: 'mine', name: 'Old Timers Mine', en: 'Self-guided 1916 mine, underground home.', it: 'Miniera del 1916 e casa sotterranea, visita libera.', dur: '1–1.5 h', q: 'Old Timers Mine Coober Pedy', hours: 'Daily 8:30–17:30' },
@@ -127,6 +133,7 @@ window.TRIP_ENRICH = {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/ViewFromKingsCanyon.JPG/960px-ViewFromKingsCanyon.JPG', credit: 'Toby Hudson', license: 'CC BY-SA 3.0', alt: 'View from Kings Canyon' },
     warn: { en: 'Limited, pricey supplies — top up food/water. Buy the Mereenie Loop permit & carry a spare tyre.', it: 'Rifornimenti scarsi e cari — fate scorta. Permesso Mereenie Loop e ruota di scorta.' },
     coverage: { telstra: 'patchy', optus: 'patchy', note: 'Small Telstra cell at the resort; both drop on the walks and en route.' },
+    stay: { name: 'Kings Creek Station', url: 'https://www.booking.com/hotel/au/kings-creek-station.html', q: 'Kings Creek Station', en: '2 × safari bush tents (glamping).', it: '2 × tende safari (glamping).' },
     todo: [
       { id: 'rim-walk', cat: 'walk', name: 'Kings Canyon Rim Walk', en: 'Iconic 6 km loop; rim & Garden of Eden.', it: 'Anello iconico di 6 km; Giardino dell’Eden.', dur: '3–4 h', q: 'Kings Canyon Rim Walk carpark Watarrka National Park', hours: '24/7 (gate shuts 9:00 if forecast ≥36°C)' },
       { id: 'creek-walk', cat: 'walk', name: 'Kings Canyon Creek Walk', en: 'Easier canyon-floor walk.', it: 'Passeggiata più facile sul fondo del canyon.', dur: '1–2 h', q: 'Kings Canyon Creek Walk Watarrka National Park', hours: '24/7' },
@@ -145,6 +152,7 @@ window.TRIP_ENRICH = {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Redbank_Gorge_-_Northern_Territory.jpeg/960px-Redbank_Gorge_-_Northern_Territory.jpeg', credit: 'Ian Cochrane', license: 'CC BY 2.0', alt: 'Redbank Gorge, West MacDonnell Ranges' },
     warn: { en: 'No food here — carry all meals, water & fuel (nearest supply: Alice Springs).', it: 'Niente cibo qui — portate tutto, acqua e benzina (rifornimenti: Alice Springs).' },
     coverage: { telstra: 'none', optus: 'none', note: 'No signal on the Mereenie Loop or at Redbank/Ridgetop. Tell someone your plan.' },
+    stay: { name: 'Redbank Gorge · Ridgetop Campground', q: 'Redbank Gorge Campground West MacDonnell', en: 'Camp site 1 — booking 593877.', it: 'Piazzola 1 — prenotazione 593877.' },
     link: { url: "https://www.google.com/maps/dir/Ginty's+Lookout,+Mereenie+NT+0872/Gosses+Bluff+Crater,+Hermannsburg+NT+0872/Redbank+Gorge,+Mount+Zeil+NT+0872/Ormiston+Gorge+Campground,+Ormiston+Gorge+Access,+Mount+Zeil+NT+0872/Serpentine+Gorge,+Namatjira+NT+0872/Ellery+Creek+Campground,+Ellery+Big+Hole,+Namatjira+NT+0872/Standley+Chasm,+Hugh+NT+0872/Simpsons+Gap,+Burt+Plain+NT+0872/@-23.8107548,131.9136489,203691m/data=!3m1!1e3!4m50!4m49!1m5!1m1!1s0x2b3b84fbacbfcfdd:0x93549646de7bc8a!2m2!1d131.408325!2d-24.0609908!1m5!1m1!1s0x2b3a6165c4186b3d:0xd995b3b467d3a373!2m2!1d132.306861!2d-23.819081!1m5!1m1!1s0x2b305bad05697b51:0x207b39cd346c9894!2m2!1d132.5198625!2d-23.5658364!1m5!1m1!1s0x2b308f50ac4084a5:0x1b77e95d63edbb7!2m2!1d132.7270455!2d-23.6331946!1m5!1m1!1s0x2b305ae0fa9eb6b7:0x1e5ea43d0e271237!2m2!1d132.978581!2d-23.7502886!1m5!1m1!1s0x2b304fe6a5e0bb59:0xe8bf3164b2e3d0b3!2m2!1d133.0725167!2d-23.7803328!1m5!1m1!1s0x2b31be117b944c7b:0xc665863abc970c8d!2m2!1d133.4697823!2d-23.7220649!1m5!1m1!1s0x2b318b5e3ba6c641:0xa6480be844a9e480!2m2!1d133.7193309!2d-23.674068!3e0?entry=ttu", en: 'Drive the full Mereenie Loop Track (Ginty’s → Simpsons Gap)', it: 'Percorri tutto il Mereenie Loop (Ginty’s → Simpsons Gap)' },
     todo: [
       { id: 'gintys', cat: 'lookout', name: "Ginty's Lookout", en: 'Roadside view back over the escarpment.', it: 'Belvedere sulla scarpata.', dur: '20–30 min', q: "Ginty's Lookout Mereenie Loop Road", hours: '24/7 (4WD final approach)', where: 'Mereenie Loop', t: '0:30' },
@@ -159,6 +167,7 @@ window.TRIP_ENRICH = {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Ellery_Creek_Big_Hole_-_West_Macdonnell_Ranges_NT.jpg/960px-Ellery_Creek_Big_Hole_-_West_Macdonnell_Ranges_NT.jpg', credit: 'Iambexta', license: 'CC BY-SA 4.0', alt: 'Ellery Creek Big Hole' },
     warn: { en: 'Only kiosk food is at Ormiston — carry all supplies for camp.', it: 'Cibo solo al chiosco di Ormiston — portate tutte le scorte per il campo.' },
     coverage: { telstra: 'patchy', optus: 'patchy', note: 'A little Telstra at Standley Chasm / Optus at Ormiston; gorges mostly none.' },
+    stay: { name: 'Ellery Creek Big Hole Campground', q: 'Ellery Creek Campground West MacDonnell', en: 'Camp site 4 — booking 593880.', it: 'Piazzola 4 — prenotazione 593880.' },
     todo: [
       { id: 'ormiston', cat: 'walk', name: 'Ormiston Gorge', en: 'Ghost Gum Walk (~1.5 h); kiosk for lunch.', it: 'Ghost Gum Walk (~1,5 h); chiosco per pranzo.', dur: '1.5 h', q: 'Ormiston Gorge West MacDonnell National Park', hours: '24/7', where: 'Namatjira Dr', t: '0:30' },
       { id: 'serpentine', cat: 'lookout', name: 'Serpentine Gorge', en: 'Narrow gorge; steep lookout climb.', it: 'Gola stretta; salita ripida al belvedere.', dur: '45 min–1 h', q: 'Serpentine Gorge West MacDonnell National Park', hours: '24/7', where: 'Namatjira Dr', t: '1:15' },
@@ -173,6 +182,7 @@ window.TRIP_ENRICH = {
   '2026-08-09': {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/d/d8/Alice_Springs_ridge.jpeg', credit: 'Stephen Codrington', license: 'CC BY 2.5', alt: 'Alice Springs and the MacDonnell Ranges' },
     coverage: { telstra: 'good', optus: 'good', note: 'Full 4G/5G both carriers — last big hub; stock up before the drive south.' },
+    stay: { name: 'Alice on Todd Apartments', url: 'https://www.hotelsone.com/the-gap-hotels-au/alice-on-todd-apartments.html', q: 'Alice on Todd Apartments Alice Springs', en: 'Two-bedroom apartment — 1 queen + 3 single beds.', it: 'Appartamento bilocale — 1 matrimoniale + 3 letti singoli.' },
     todo: [
       { id: 'standley', cat: 'lookout', name: 'Standley Chasm', en: 'Red-walled chasm, glowing best at midday.', it: 'Gola dalle pareti rosse, top a mezzogiorno.', dur: '1–1.5 h', q: 'Standley Chasm Angkerle Atwatye', hours: 'Mon–Sat 8:00–17:00; Sun/PH 8:00–14:00 (fee)', where: 'West MacDonnells', t: '0:50' },
       { id: 'simpsons-gap', cat: 'walk', name: 'Simpsons Gap', en: 'Easy gap walk; black-footed rock wallabies.', it: 'Facile cammino; wallaby delle rocce.', dur: '1 h', q: 'Simpsons Gap West MacDonnell National Park', hours: '24/7', where: 'West MacDonnells', t: '1:20' },
@@ -195,6 +205,7 @@ window.TRIP_ENRICH = {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Travellers_Rest%2C_Marla.jpg/960px-Travellers_Rest%2C_Marla.jpg', credit: 'Ed Dunens', license: 'CC BY 2.0', alt: 'Marla Travellers Rest' },
     warn: { en: 'Marla is a highway roadhouse stop — the roadhouse is the only food.', it: 'Marla è una sosta roadhouse — il roadhouse è l’unico posto per mangiare.' },
     coverage: { telstra: 'good', optus: 'patchy', note: 'Telstra at the roadhouse; Optus intermittent. Long dead stretches around it.' },
+    stay: { name: 'Marla Travellers Rest', q: 'Marla Travellers Rest Marla SA', en: 'Family room — 1 queen + 2 single beds.', it: 'Camera famiglia — 1 matrimoniale + 2 letti singoli.' },
     todo: [
       { id: 'art-gallery', cat: 'art', name: 'Marla Travellers Rest gallery', en: 'Indigenous art & displays in the roadhouse.', it: 'Arte indigena e mostre nel roadhouse.', dur: '15–20 min', q: 'Marla Travellers Rest Marla SA', hours: '24/7' },
       { id: 'ghan-view', cat: 'lookout', name: 'The Ghan railway line', en: 'Watch the track stretch to the horizon.', it: 'Guarda i binari sparire all’orizzonte.', dur: '10 min', q: 'Marla SA railway', hours: '24/7' },
@@ -209,6 +220,7 @@ window.TRIP_ENRICH = {
   '2026-08-11': {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Jacaranda_Time_Port_Augusta.jpg/960px-Jacaranda_Time_Port_Augusta.jpg', credit: 'GeorgieSharp', license: 'CC BY-SA 3.0', alt: 'Port Augusta waterfront' },
     coverage: { telstra: 'good', optus: 'good', note: 'Strong coverage both networks — regional gateway city.' },
+    stay: { name: 'Discovery Parks · Port Augusta', q: 'Discovery Parks Port Augusta', en: '2 standard rooms.', it: '2 camere standard.' },
     todo: [
       { id: 'botanic', cat: 'garden', name: 'Australian Arid Lands Botanic Garden', en: 'Arid-zone flora, birds, gulf & range views.', it: 'Flora arida, uccelli, vista su golfo e monti.', dur: '1–1.5 h', q: 'Australian Arid Lands Botanic Garden Port Augusta', hours: 'Daily 7:30–sunset' },
       { id: 'water-tower', cat: 'lookout', name: 'Water Tower Lookout', en: '90 steps to 360° gulf & Flinders views.', it: '90 gradini per vista a 360° sul golfo.', dur: '20–30 min', q: 'Water Tower Lookout Port Augusta', hours: '24/7 (occasionally closed)' },
@@ -227,6 +239,7 @@ window.TRIP_ENRICH = {
   '2026-08-12': {
     photo: { url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Hay_Water_Tower_Art%2C_Hay%2C_New_South_Wales%2C_2022%2C_04.jpg/960px-Hay_Water_Tower_Art%2C_Hay%2C_New_South_Wales%2C_2022%2C_04.jpg', credit: 'Kgbo', license: 'CC BY-SA 4.0', alt: 'Hay Water Tower art, NSW' },
     coverage: { telstra: 'good', optus: 'patchy', note: 'Telstra reliable in town/highway; Optus weaker outside the centre.' },
+    stay: { name: 'The Saltbush Motor Inn · Hay', q: 'Saltbush Motor Inn Hay NSW', en: '2 king suites.', it: '2 suite king.' },
     todo: [
       { id: 'shear-outback', cat: 'heritage', name: 'Shear Outback', en: 'Shearing heritage centre & Hall of Fame.', it: 'Centro sulla tosatura & Hall of Fame.', dur: '1–1.5 h', q: 'Shear Outback Hay NSW', hours: 'Mon–Sat 9:00–16:00; Sun 9:00–15:00' },
       { id: 'dunera', cat: 'heritage', name: 'Dunera Museum', en: 'WWII internment history of the Dunera Boys.', it: 'Storia dell’internamento dei Dunera Boys.', dur: '45–60 min', q: 'Dunera Museum Hay NSW', hours: 'Daily 9:00–18:00' },

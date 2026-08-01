@@ -249,6 +249,19 @@
   function warnHTML(w) {
     return '<p class="day-warn">⚠️ <span>' + esc(it() ? w.it : w.en) + '</span></p>';
   }
+  // "Where you're staying" — accommodation name, room/bed details, optional map pin.
+  function stayHTML(s) {
+    var rooms = it() ? (s.it || s.en) : (s.en || s.it);
+    var name = s.url
+      ? '<a class="stay-name stay-link" target="_blank" rel="noopener" href="' + esc(s.url) + '">' + esc(s.name) + '</a>'
+      : '<span class="stay-name">' + esc(s.name) + '</span>';
+    return '<div class="stay">' + icon('station', 'stay-ic') +
+      '<div class="stay-main"><span class="stay-label">' + esc(t('stay_title')) + '</span>' +
+      name +
+      (rooms ? '<span class="stay-rooms">' + esc(rooms) + '</span>' : '') + '</div>' +
+      (s.q ? '<a class="ti-map" target="_blank" rel="noopener" href="' + mapUrl(s.q) + '" aria-label="Map">' + icon('pin') + '</a>' : '') +
+      '</div>';
+  }
   function linkHTML(l) {
     return '<a class="drive-link" target="_blank" rel="noopener" href="' + esc(l.url) + '">' +
       icon('drive') + '<span>' + esc(it() ? l.it : l.en) + '</span>' + icon('pin', 'dl-go') + '</a>';
@@ -328,6 +341,7 @@
       if (d.warn) html += warnHTML(d.warn);
       if (day.classList.contains('camp')) html += starHTML(day.dataset.date);
       if (d.coverage) html += coverageHTML(d.coverage);
+      if (d.stay) html += stayHTML(d.stay);
       if (d.link) html += linkHTML(d.link);
       var todo = d.todo || [], food = d.food || [];
       var routeItems = todo.filter(isRoute).concat(food.filter(isRoute));
