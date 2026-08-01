@@ -436,7 +436,16 @@ body{overscroll-behavior-y:contain;}
 :root[data-theme="dark"] .day-warn{background:#2f2410; border-color:var(--camp-line);}
 :root[data-theme="dark"] .drive-link{background:#2b2113; border-color:var(--camp-line);}
 :root[data-theme="dark"] .drive-link:hover{background:#352815;}
-:root[data-theme="dark"] .pill.camp{color:#2a1e08;}
+/* Banner sits on near-black in dark mode, but these children use var(--paper)
+   (dark) as their text colour — repaint them light so links/labels are legible. */
+:root[data-theme="dark"] .banner a,
+:root[data-theme="dark"] .profile-chip .pname,
+:root[data-theme="dark"] .sync-status{color:#ECE3D4;}
+:root[data-theme="dark"] .pill.camp{color:#F0E4C8;}
+/* Empty-star track was near-invisible on the dark card; lift it to a visible grey. */
+:root[data-theme="dark"] .stars .s-b{color:#6E6049;}
+/* Belt-and-braces: never let a bare button fall back to black text on dark. */
+:root[data-theme="dark"] .react{color:var(--ink);}
 /* Coverage badges: light-on-tint dark text → readable light text on dark tint. */
 :root[data-theme="dark"] .cov-good{background:rgba(147,169,114,.16); color:#B9CE9C;}
 :root[data-theme="dark"] .cov-good .cov-lvl{color:#93A972;}
