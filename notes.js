@@ -496,6 +496,22 @@
     var out = ''; (photos || []).forEach(function (p) { var url = URL.createObjectURL(p.blob); out += '<img src="' + url + '" data-full="' + url + '" alt="">'; }); return out;
   }
 
+  // MediaRecorder clips (webm/opus, and some mp4) are written without a duration
+  // in the header, so the <audio> element reports duration = Infinity and stops
+  // after the first buffered chunk. Forcing a seek to the end makes the browser
+  // scan the whole file and learn the real duration; then we reset to the start.
+  // Capture phase because media events (loadedmetadata) don't bubble.
+  document.addEventListener('loadedmetadata', function (e) {
+    var a = e.target;
+    if (!a || a.tagName !== 'AUDIO' || !a.classList.contains('note-audio')) return;
+    if (a.duration !== Infinity && !isNaN(a.duration)) return;
+    if (a.dataset.durFixed) return;
+    a.dataset.durFixed = '1';
+    var onSeek = function () { a.removeEventListener('timeupdate', onSeek); a.currentTime = 0; };
+    a.addEventListener('timeupdate', onSeek);
+    try { a.currentTime = 1e101; } catch (err) {}
+  }, true);
+
   function audioHTML(n) {
     if (n.audio_path) return '<audio class="note-audio" controls preload="none" src="' + esc(publicUrl(n.audio_path)) + '"></audio>';
     if (n._local && n.audio_blob) { try { return '<audio class="note-audio" controls src="' + URL.createObjectURL(n.audio_blob) + '"></audio>'; } catch (e) {} }
