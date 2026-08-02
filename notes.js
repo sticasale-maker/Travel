@@ -556,6 +556,25 @@
     Array.prototype.forEach.call(els, function (a) { audioObserver.observe(a); });
   }
 
+  // Diagnostic readout under a freshly recorded memo: shows how long we recorded
+  // for (wall clock) vs. how many seconds of audio the file actually decodes to.
+  // If "recorded" >> "audio", iOS truncated the capture; if they match but
+  // playback still stops short, it's the container's missing duration instead.
+  var _diagCtx = null;
+  function showAudioDiag(el, blob, recSecs) {
+    if (!el) return;
+    var kb = Math.round(blob.size / 1024);
+    el.textContent = 'recorded ' + recSecs + 's · ' + kb + ' KB · reading…';
+    try {
+      _diagCtx = _diagCtx || new (window.AudioContext || window.webkitAudioContext)();
+      blob.arrayBuffer().then(function (buf) {
+        _diagCtx.decodeAudioData(buf, function (ab) {
+          el.textContent = 'recorded ' + recSecs + 's · audio ' + ab.duration.toFixed(1) + 's · ' + kb + ' KB';
+        }, function () { el.textContent = 'recorded ' + recSecs + 's · ' + kb + ' KB · (couldn’t decode)'; });
+      }).catch(function () { el.textContent = 'recorded ' + recSecs + 's · ' + kb + ' KB'; });
+    } catch (e) { el.textContent = 'recorded ' + recSecs + 's · ' + kb + ' KB'; }
+  }
+
   function audioHTML(n) {
     if (n.audio_path) {
       var au = esc(publicUrl(n.audio_path));
@@ -717,7 +736,7 @@
     var voiceRow = form.querySelector('.voice-row');
     if (window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       voiceRow.innerHTML = '<button type="button" class="rec-btn">🎙 ' + esc(t('record')) + '</button><span class="rec-status"></span>';
-      var recBtn = voiceRow.querySelector('.rec-btn'), recStatus = voiceRow.querySelector('.rec-status'), chunks = [];
+      var recBtn = voiceRow.querySelector('.rec-btn'), recStatus = voiceRow.querySelector('.rec-status'), chunks = [], recStart = 0;
       recBtn.addEventListener('click', function () {
         if (rec && rec.state === 'recording') { rec.stop(); return; }
         navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
@@ -727,9 +746,17 @@
             stream.getTracks().forEach(function (tk) { tk.stop(); });
             pendingAudio = new Blob(chunks, { type: (rec.mimeType || 'audio/mp4') });
             recBtn.textContent = '🎙 ' + t('rerecord');
-            try { recStatus.innerHTML = '<audio controls src="' + URL.createObjectURL(pendingAudio) + '"></audio>'; } catch (e) {}
+            var recSecs = recStart ? Math.round((Date.now() - recStart) / 1000) : 0;
+            try {
+              recStatus.innerHTML = '<audio controls src="' + URL.createObjectURL(pendingAudio) + '"></audio>' +
+                '<div class="rec-dbg"></div>';
+              showAudioDiag(recStatus.querySelector('.rec-dbg'), pendingAudio, recSecs);
+            } catch (e) {}
           };
-          rec.start(); recBtn.textContent = '⏹ ' + t('stop'); recStatus.textContent = t('recording');
+          // iOS can hand back a truncated single blob when start() runs with no
+          // timeslice; flushing every second forces it to deliver the full recording.
+          rec.start(1000); recStart = Date.now();
+          recBtn.textContent = '⏹ ' + t('stop'); recStatus.textContent = t('recording');
         }).catch(function () { recStatus.textContent = t('mic_denied'); });
       });
     }

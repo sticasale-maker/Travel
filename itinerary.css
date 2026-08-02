@@ -594,6 +594,7 @@ body{overscroll-behavior-y:contain;}
   color:var(--ochre-deep); cursor:pointer;}
 .rec-status{font-family:'Space Mono',monospace; font-size:11px; color:var(--muted);}
 .rec-status audio{height:30px; vertical-align:middle; max-width:200px;}
+.rec-dbg{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--faint); margin-top:5px;}
 
 /* ---- enrichment layer (enrich.js): photo, highlights, to-do, eat & drink ---- */
 .day-enrich{clear:both; margin-top:14px;}
