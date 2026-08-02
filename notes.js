@@ -496,70 +496,76 @@
     var out = ''; (photos || []).forEach(function (p) { var url = URL.createObjectURL(p.blob); out += '<img src="' + url + '" data-full="' + url + '" alt="">'; }); return out;
   }
 
-  // MediaRecorder clips (webm/opus, and some mp4) are written without a duration
-  // in the header, so the <audio> element reports duration = Infinity and its
-  // scrubber never fills. Forcing a seek to the end makes the browser scan the
-  // whole file and learn the real duration; then we reset to the start. On a
-  // fully-downloaded blob (see blobifyAudio) this scan is instant and reliable.
-  // Capture phase because media events (loadedmetadata) don't bubble.
-  document.addEventListener('loadedmetadata', function (e) {
-    var a = e.target;
-    if (!a || a.tagName !== 'AUDIO' || !a.classList.contains('note-audio')) return;
-    if (a.duration !== Infinity && !isNaN(a.duration)) return;
-    if (a.dataset.durFixed) return;
-    a.dataset.durFixed = '1';
-    var onSeek = function () { a.removeEventListener('timeupdate', onSeek); a.currentTime = 0; };
-    a.addEventListener('timeupdate', onSeek);
-    try { a.currentTime = 1e101; } catch (err) {}
-  }, true);
+  // Voice memos are played through the Web Audio API rather than a native
+  // <audio controls>. MediaRecorder clips (iOS mp4, and webm) ship with no
+  // duration in the container header, so an <audio> element can't tell how long
+  // the file is and stops partway through even for a complete local file (this
+  // was the ~13s cut-off on iPhone). decodeAudioData reads the whole file into a
+  // buffer whose real length IS known, and an AudioBufferSourceNode plays that
+  // buffer end to end. We render our own play/pause + progress UI on top.
+  var VCTX = null;
+  function vctx() { VCTX = VCTX || new (window.AudioContext || window.webkitAudioContext)(); return VCTX; }
+  function vfmt(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
 
-  // A *streamed* voice memo stops after a few seconds: with no duration in the
-  // header the element treats the end of the first buffered chunk as EOF. Local
-  // recordings play fine because they're a complete blob; the synced copy others
-  // hear is streamed, so it cuts off. Fix: download the whole (short) clip into a
-  // blob and swap it in before playback, so every byte is present up front. We
-  // hydrate lazily as each clip nears the viewport, and always before the user
-  // taps play, so the eventual play() stays a native src swap (iOS blocks play()
-  // called after an async fetch inside a tap handler).
-  var audioObserver = null;
-  function blobifyAudio(a) {
-    if (!a || a.dataset.blobbed || a.dataset.blobbing) return;
-    var remote = a.dataset.remoteSrc;
-    if (!remote) return;
-    a.dataset.blobbing = '1';
-    fetch(remote).then(function (r) { return r.ok ? r.blob() : Promise.reject(); }).then(function (b) {
-      delete a.dataset.blobbing;
-      a.dataset.blobbed = '1';
-      var wasPlaying = !a.paused, pos = a.currentTime;
-      a.src = URL.createObjectURL(b);
-      // If the swap lands mid-playback (rare), restore position and resume.
-      if (wasPlaying || pos > 0) {
-        a.addEventListener('loadedmetadata', function once() {
-          a.removeEventListener('loadedmetadata', once);
-          try { a.currentTime = pos; } catch (e) {}
-          if (wasPlaying) a.play().catch(function () {});
-        }, { once: true });
-      }
-    }).catch(function () { delete a.dataset.blobbing; });
-  }
-  function hydrateAudio(root) {
-    var els = (root || document).querySelectorAll('.note-audio[data-remote-src]:not([data-blobbed])');
-    if (!els.length) return;
-    if (!('IntersectionObserver' in window)) { Array.prototype.forEach.call(els, blobifyAudio); return; }
-    if (!audioObserver) {
-      audioObserver = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) {
-          if (en.isIntersecting) { blobifyAudio(en.target); audioObserver.unobserve(en.target); }
-        });
-      }, { rootMargin: '300px' });
+  function initVoicePlayer(el) {
+    if (!el || el.dataset.vinit) return; el.dataset.vinit = '1';
+    var src = el.dataset.vsrc;
+    var btn = el.querySelector('.vm-btn'), fill = el.querySelector('.vm-fill'),
+        timeEl = el.querySelector('.vm-time'), track = el.querySelector('.vm-track');
+    var buffer = null, node = null, playing = false, startedAt = 0, offset = 0, raf = 0, dur = 0, loading = false;
+
+    function paint() {
+      var cur = playing ? (vctx().currentTime - startedAt) : offset;
+      if (dur && cur > dur) cur = dur;
+      fill.style.width = dur ? (cur / dur * 100) + '%' : '0%';
+      timeEl.textContent = vfmt(cur) + (dur ? ' / ' + vfmt(dur) : '');
+      if (playing) raf = requestAnimationFrame(paint);
     }
-    Array.prototype.forEach.call(els, function (a) { audioObserver.observe(a); });
+    function stopNode() { if (node) { try { node.onended = null; node.stop(); } catch (e) {} node = null; } }
+    function toEnd() { playing = false; offset = 0; cancelAnimationFrame(raf); btn.textContent = '▶'; paint(); }
+    function ensureBuffer() {
+      if (buffer) return Promise.resolve(buffer);
+      if (loading) return Promise.reject();
+      loading = true; btn.textContent = '…';
+      return fetch(src).then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
+        return new Promise(function (res, rej) {
+          vctx().decodeAudioData(ab, function (buf) { buffer = buf; dur = buf.duration; loading = false; res(buf); },
+            function (e) { loading = false; rej(e); });
+        });
+      });
+    }
+    function play() {
+      var c = vctx(); if (c.state === 'suspended') c.resume();
+      ensureBuffer().then(function (buf) {
+        stopNode();
+        if (offset >= dur) offset = 0;
+        node = c.createBufferSource(); node.buffer = buf; node.connect(c.destination);
+        node.onended = function () { if (playing) toEnd(); };  // fires on natural end only (stopNode nulls it)
+        startedAt = c.currentTime - offset; node.start(0, offset);
+        playing = true; btn.textContent = '⏸'; paint();
+      }).catch(function () { btn.textContent = '⚠'; });
+    }
+    function pause() {
+      if (!playing) return;
+      offset = vctx().currentTime - startedAt; if (dur && offset > dur) offset = dur;
+      stopNode(); playing = false; cancelAnimationFrame(raf); btn.textContent = '▶'; paint();
+    }
+    btn.addEventListener('click', function () { playing ? pause() : play(); });
+    track.addEventListener('click', function (e) {
+      if (!dur) return;
+      var rect = track.getBoundingClientRect();
+      offset = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) * dur;
+      if (playing) play(); else paint();
+    });
+    timeEl.textContent = vfmt(0);
+  }
+  function initVoicePlayers(root) {
+    (root || document).querySelectorAll('.vmemo[data-vsrc]').forEach(initVoicePlayer);
   }
 
-  // Diagnostic readout under a freshly recorded memo: shows how long we recorded
-  // for (wall clock) vs. how many seconds of audio the file actually decodes to.
-  // If "recorded" >> "audio", iOS truncated the capture; if they match but
-  // playback still stops short, it's the container's missing duration instead.
+  // Diagnostic readout under a freshly recorded memo: recorded time (wall clock)
+  // vs. the file's true decoded length. Kept as a reassurance that the full
+  // recording is captured.
   var _diagCtx = null;
   function showAudioDiag(el, blob, recSecs) {
     if (!el) return;
@@ -575,14 +581,15 @@
     } catch (e) { el.textContent = 'recorded ' + recSecs + 's · ' + kb + ' KB'; }
   }
 
+  function voicePlayerHTML(src) {
+    return '<div class="vmemo" data-vsrc="' + esc(src) + '">' +
+      '<button type="button" class="vm-btn" aria-label="Play">▶</button>' +
+      '<div class="vm-track"><div class="vm-fill"></div></div>' +
+      '<span class="vm-time">0:00</span></div>';
+  }
   function audioHTML(n) {
-    if (n.audio_path) {
-      var au = esc(publicUrl(n.audio_path));
-      // src stays set so an early tap still plays (streamed); blobifyAudio swaps
-      // in the complete blob before that, so it plays through to the end.
-      return '<audio class="note-audio" controls preload="metadata" src="' + au + '" data-remote-src="' + au + '"></audio>';
-    }
-    if (n._local && n.audio_blob) { try { return '<audio class="note-audio" controls src="' + URL.createObjectURL(n.audio_blob) + '"></audio>'; } catch (e) {} }
+    if (n.audio_path) return voicePlayerHTML(publicUrl(n.audio_path));
+    if (n._local && n.audio_blob) { try { return voicePlayerHTML(URL.createObjectURL(n.audio_blob)); } catch (e) {} }
     return '';
   }
   function reactionsHTML(noteId) {
@@ -646,7 +653,7 @@
           reactionsHTML(n.id) + repliesHTML(n.id) + '</div>';
       }).join('');
       listEl.innerHTML = html;
-      hydrateAudio(listEl);
+      initVoicePlayers(listEl);
 
       list.forEach(function (n) {
         if (!n._local) return;
@@ -748,8 +755,9 @@
             recBtn.textContent = '🎙 ' + t('rerecord');
             var recSecs = recStart ? Math.round((Date.now() - recStart) / 1000) : 0;
             try {
-              recStatus.innerHTML = '<audio controls src="' + URL.createObjectURL(pendingAudio) + '"></audio>' +
+              recStatus.innerHTML = voicePlayerHTML(URL.createObjectURL(pendingAudio)) +
                 '<div class="rec-dbg"></div>';
+              initVoicePlayers(recStatus);
               showAudioDiag(recStatus.querySelector('.rec-dbg'), pendingAudio, recSecs);
             } catch (e) {}
           };
