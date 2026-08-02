@@ -503,9 +503,10 @@
   // was the ~13s cut-off on iPhone). decodeAudioData reads the whole file into a
   // buffer whose real length IS known, and an AudioBufferSourceNode plays that
   // buffer end to end. We render our own play/pause + progress UI on top.
-  var VCTX = null;
+  var VCTX = null, vActive = null; // vActive = stop() of whichever memo is currently sounding
   function vctx() { VCTX = VCTX || new (window.AudioContext || window.webkitAudioContext)(); return VCTX; }
   function vfmt(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function vStopActive() { if (vActive) { var f = vActive; vActive = null; try { f(); } catch (e) {} } }
 
   function initVoicePlayer(el) {
     if (!el || el.dataset.vinit) return; el.dataset.vinit = '1';
@@ -514,15 +515,31 @@
         timeEl = el.querySelector('.vm-time'), track = el.querySelector('.vm-track');
     var buffer = null, node = null, playing = false, startedAt = 0, offset = 0, raf = 0, dur = 0, loading = false;
 
-    function paint() {
-      var cur = playing ? (vctx().currentTime - startedAt) : offset;
-      if (dur && cur > dur) cur = dur;
+    function elapsed() { return playing ? (vctx().currentTime - startedAt) : offset; }
+    function render(cur) {
+      if (dur && cur > dur) cur = dur; if (cur < 0) cur = 0;
       fill.style.width = dur ? (cur / dur * 100) + '%' : '0%';
       timeEl.textContent = vfmt(cur) + (dur ? ' / ' + vfmt(dur) : '');
-      if (playing) raf = requestAnimationFrame(paint);
     }
-    function stopNode() { if (node) { try { node.onended = null; node.stop(); } catch (e) {} node = null; } }
-    function toEnd() { playing = false; offset = 0; cancelAnimationFrame(raf); btn.textContent = '▶'; paint(); }
+    // Always actually silence + release the node. iOS keeps playing audio if you
+    // only drop the reference, which is what left memos unstoppable before.
+    function killNode() {
+      if (node) { try { node.onended = null; } catch (e) {} try { node.stop(); } catch (e) {}
+        try { node.disconnect(); } catch (e) {} node = null; }
+    }
+    function tick() {
+      if (!playing) return;
+      var cur = elapsed();
+      if (dur && cur >= dur) { finishEnd(); return; }   // real end, tracked by wall clock
+      render(cur); raf = requestAnimationFrame(tick);
+    }
+    function finishEnd() { killNode(); playing = false; offset = 0; if (vActive === stopHere) vActive = null;
+      cancelAnimationFrame(raf); btn.textContent = '▶'; render(0); }
+    function stopHere() {   // pause where we are (button while playing, or pre-empted by another memo)
+      if (node) offset = elapsed(); if (dur && offset > dur) offset = dur; if (offset < 0) offset = 0;
+      killNode(); playing = false; if (vActive === stopHere) vActive = null;
+      cancelAnimationFrame(raf); btn.textContent = '▶'; render(offset);
+    }
     function ensureBuffer() {
       if (buffer) return Promise.resolve(buffer);
       if (loading) return Promise.reject();
@@ -534,30 +551,33 @@
         });
       });
     }
-    function play() {
+    function start() {
       var c = vctx(); if (c.state === 'suspended') c.resume();
       ensureBuffer().then(function (buf) {
-        stopNode();
+        if (vActive && vActive !== stopHere) vStopActive();  // never let two memos overlap
+        killNode();
         if (offset >= dur) offset = 0;
         node = c.createBufferSource(); node.buffer = buf; node.connect(c.destination);
-        node.onended = function () { if (playing) toEnd(); };  // fires on natural end only (stopNode nulls it)
+        var thisNode = node;
+        // iOS sometimes fires onended long before the real end; only trust it if
+        // the wall clock says we're actually there, otherwise let tick() finish.
+        node.onended = function () {
+          if (node !== thisNode) return;
+          if (!dur || (vctx().currentTime - startedAt) >= dur - 0.6) finishEnd();
+        };
         startedAt = c.currentTime - offset; node.start(0, offset);
-        playing = true; btn.textContent = '⏸'; paint();
-      }).catch(function () { btn.textContent = '⚠'; });
+        playing = true; vActive = stopHere; btn.textContent = '⏸';
+        cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+      }).catch(function () { if (!buffer) btn.textContent = '⚠'; });
     }
-    function pause() {
-      if (!playing) return;
-      offset = vctx().currentTime - startedAt; if (dur && offset > dur) offset = dur;
-      stopNode(); playing = false; cancelAnimationFrame(raf); btn.textContent = '▶'; paint();
-    }
-    btn.addEventListener('click', function () { playing ? pause() : play(); });
+    btn.addEventListener('click', function () { if (loading) return; if (playing) stopHere(); else start(); });
     track.addEventListener('click', function (e) {
       if (!dur) return;
       var rect = track.getBoundingClientRect();
       offset = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) * dur;
-      if (playing) play(); else paint();
+      if (playing) start(); else render(offset);
     });
-    timeEl.textContent = vfmt(0);
+    render(0);
   }
   function initVoicePlayers(root) {
     (root || document).querySelectorAll('.vmemo[data-vsrc]').forEach(initVoicePlayer);
