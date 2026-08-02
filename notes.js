@@ -503,10 +503,20 @@
   // was the ~13s cut-off on iPhone). decodeAudioData reads the whole file into a
   // buffer whose real length IS known, and an AudioBufferSourceNode plays that
   // buffer end to end. We render our own play/pause + progress UI on top.
-  var VCTX = null, vActive = null; // vActive = stop() of whichever memo is currently sounding
+  var VCTX = null, vActive = null;   // vActive = stop() of whichever memo is currently sounding
+  var vPlayingEl = null, vDeferred = []; // the playing .vmemo, and days whose re-render we deferred
   function vctx() { VCTX = VCTX || new (window.AudioContext || window.webkitAudioContext)(); return VCTX; }
   function vfmt(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
   function vStopActive() { if (vActive) { var f = vActive; vActive = null; try { f(); } catch (e) {} } }
+  // Background sync rebuilds each day's note list; doing that mid-playback would
+  // detach the player button while the audio (a JS closure) plays on, orphaned
+  // and unstoppable. So renderDay defers any day that holds the playing memo, and
+  // we flush those deferred renders once nothing is playing anymore.
+  function vFlushDeferred() {
+    if (vPlayingEl) return;
+    var d = vDeferred; vDeferred = [];
+    d.forEach(function (dayEl) { renderDay(dayEl); });
+  }
 
   function initVoicePlayer(el) {
     if (!el || el.dataset.vinit) return; el.dataset.vinit = '1';
@@ -533,12 +543,16 @@
       if (dur && cur >= dur) { finishEnd(); return; }   // real end, tracked by wall clock
       render(cur); raf = requestAnimationFrame(tick);
     }
+    // When playback ends, release the "currently playing" slot and let any
+    // renders we deferred during playback run (async, so a memo that starts in
+    // the same tick — e.g. tapping another one — re-claims the slot first).
+    function releaseSlot() { if (vPlayingEl === el) { vPlayingEl = null; setTimeout(vFlushDeferred, 0); } }
     function finishEnd() { killNode(); playing = false; offset = 0; if (vActive === stopHere) vActive = null;
-      cancelAnimationFrame(raf); btn.textContent = '▶'; render(0); }
+      cancelAnimationFrame(raf); btn.textContent = '▶'; render(0); releaseSlot(); }
     function stopHere() {   // pause where we are (button while playing, or pre-empted by another memo)
       if (node) offset = elapsed(); if (dur && offset > dur) offset = dur; if (offset < 0) offset = 0;
       killNode(); playing = false; if (vActive === stopHere) vActive = null;
-      cancelAnimationFrame(raf); btn.textContent = '▶'; render(offset);
+      cancelAnimationFrame(raf); btn.textContent = '▶'; render(offset); releaseSlot();
     }
     function ensureBuffer() {
       if (buffer) return Promise.resolve(buffer);
@@ -566,7 +580,7 @@
           if (!dur || (vctx().currentTime - startedAt) >= dur - 0.6) finishEnd();
         };
         startedAt = c.currentTime - offset; node.start(0, offset);
-        playing = true; vActive = stopHere; btn.textContent = '⏸';
+        playing = true; vActive = stopHere; vPlayingEl = el; btn.textContent = '⏸';
         cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
       }).catch(function () { if (!buffer) btn.textContent = '⚠'; });
     }
@@ -646,6 +660,12 @@
     if (!listEl) return;
     allNotes().then(function (locals) {
       var list = mergedForDay(dayKey, locals);
+      // Don't rebuild this list out from under a memo that's playing in it —
+      // that would orphan the audio. Defer until playback ends (vFlushDeferred).
+      if (vPlayingEl && listEl.contains(vPlayingEl)) {
+        if (vDeferred.indexOf(dayEl) < 0) vDeferred.push(dayEl);
+        return;
+      }
       var bottomBtn = dayEl.querySelector('.add-note-bottom');
       if (bottomBtn) bottomBtn.style.display = list.length ? 'flex' : 'none';
       if (!list.length) {
