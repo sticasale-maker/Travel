@@ -25,6 +25,9 @@
       banner_starts_many: 'Trip starts <b>{date}</b> · {n} days to go',
       banner_complete: 'Trip complete — <b>welcome home</b>',
       banner_today_only: 'Today is <b>{date}</b>',
+      // collapsed past days
+      past_expand: 'Tap to read this day',
+      past_collapse: 'Tap to collapse',
       // journal (was "notes")
       journal_title: 'Journal',
       todo_title: 'Things to do', food_title: 'Eat & drink',
@@ -105,6 +108,8 @@
       banner_starts_many: 'Il viaggio inizia <b>{date}</b> · mancano {n} giorni',
       banner_complete: 'Viaggio concluso — <b>bentornati a casa</b>',
       banner_today_only: 'Oggi è <b>{date}</b>',
+      past_expand: 'Tocca per leggere questo giorno',
+      past_collapse: 'Tocca per richiudere',
       journal_title: 'Diario',
       todo_title: 'Cose da fare', food_title: 'Mangiare e bere',
       stay_title: 'Dove dormite',
@@ -337,13 +342,42 @@ window.TRIP_DATA = {
     days.forEach(function (d, i) {
       var dt = new Date(d.dataset.date + 'T00:00:00');
       if (dt.getTime() === today.getTime()) { focusEl = d; focusNum = i + 1; }
+
+      // Days already behind us start collapsed to a compact summary so the list
+      // stays short and today is easy to find. A clear hint invites first-time
+      // users to tap them open; tapping toggles the day back and forth.
+      if (dt.getTime() < today.getTime()) {
+        d.classList.add('past', 'collapsed');
+        var hint = document.createElement('div');
+        hint.className = 'past-hint';
+        hint.innerHTML =
+          '<span class="ph-label"></span>' +
+          '<svg class="ph-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" ' +
+          'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M6 9l6 6 6-6"/></svg>';
+        d.appendChild(hint);
+      }
+
       d.addEventListener('click', function (e) {
         if (e.target.closest('a')) return;
         if (e.target.closest('.notes')) return;
+        // A collapsed past day: first tap just expands it (no focus takeover).
+        if (d.classList.contains('past')) {
+          d.classList.toggle('collapsed');
+          setPastHint(d);
+          return;
+        }
         days.forEach(function (x) { x.classList.remove('focus'); });
         d.classList.add('focus');
       });
     });
+
+    // Keep each past day's hint label in sync with its collapsed/open state.
+    function setPastHint(d) {
+      var lbl = d.querySelector('.past-hint .ph-label');
+      if (lbl) lbl.textContent = I18N.t(d.classList.contains('collapsed') ? 'past_expand' : 'past_collapse');
+    }
+    days.forEach(function (d) { if (d.classList.contains('past')) setPastHint(d); });
 
     function fmt(dt) {
       return dt.toLocaleDateString(I18N.locale(), { weekday: 'short', day: 'numeric', month: 'short' });

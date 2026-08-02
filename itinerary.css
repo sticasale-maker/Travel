@@ -67,6 +67,35 @@ h1 .arrow{color:var(--ochre); font-weight:400;}
   box-shadow:0 6px 26px -12px rgba(138,67,25,.5); transform:scale(1.012);}
 .day.focus.camp{background:#FCF1D6;}
 
+/* ============================================================
+   Past days — collapsed to a compact, tappable summary.
+   Only the date row + destination stay visible; the rest is
+   hidden until the card is expanded. A clear hint invites
+   first-time users to open it. Today and future days are never
+   collapsed, so this only ever affects days already behind us.
+   ============================================================ */
+.day.past{background:var(--paper-2); border-style:dashed;}
+.day.past.collapsed{padding-bottom:14px;}
+/* Fade the past-day summary slightly so today reads as "live". */
+.day.past.collapsed .place{font-size:21px; color:var(--muted); margin-bottom:0;}
+.day.past.collapsed .place .lead{color:var(--faint);}
+.day.past.collapsed .dnum{opacity:.85;}
+/* Hide every detail block while collapsed; keep only the top row,
+   the destination line and the expand hint. */
+.day.past.collapsed > *{display:none;}
+.day.past.collapsed > .toprow,
+.day.past.collapsed > .place,
+.day.past.collapsed > .past-hint{display:flex;}
+.day.past.collapsed > .place{display:block;}
+
+.past-hint{display:flex; align-items:center; gap:6px; margin-top:10px;
+  font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:.06em;
+  text-transform:uppercase; font-weight:700; color:var(--ochre-deep);}
+.past-hint .ph-chev{flex:none; transition:transform .18s ease;}
+/* Chevron points down when collapsed (tap to open), up when expanded. */
+.day.past:not(.collapsed) .past-hint .ph-chev{transform:rotate(180deg);}
+.day.past:not(.collapsed) .past-hint{color:var(--faint);}
+
 .toprow{display:flex; align-items:center; justify-content:space-between; gap:10px;
   flex-wrap:wrap; margin-bottom:8px;}
 .dnum{display:inline-flex; align-items:center; gap:9px;

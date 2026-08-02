@@ -20,6 +20,9 @@
       banner_starts_many: 'Trip starts <b>{date}</b> · {n} days to go',
       banner_complete: 'Trip complete — <b>welcome home</b>',
       banner_today_only: 'Today is <b>{date}</b>',
+      // collapsed past days
+      past_expand: 'Tap to read this day',
+      past_collapse: 'Tap to collapse',
       // journal (was "notes")
       journal_title: 'Journal',
       todo_title: 'Things to do', food_title: 'Eat & drink',
@@ -100,6 +103,8 @@
       banner_starts_many: 'Il viaggio inizia <b>{date}</b> · mancano {n} giorni',
       banner_complete: 'Viaggio concluso — <b>bentornati a casa</b>',
       banner_today_only: 'Oggi è <b>{date}</b>',
+      past_expand: 'Tocca per leggere questo giorno',
+      past_collapse: 'Tocca per richiudere',
       journal_title: 'Diario',
       todo_title: 'Cose da fare', food_title: 'Mangiare e bere',
       stay_title: 'Dove dormite',
