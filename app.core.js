@@ -1477,9 +1477,10 @@ window.TRIP_DATA = {
   }
 
   // MediaRecorder clips (webm/opus, and some mp4) are written without a duration
-  // in the header, so the <audio> element reports duration = Infinity and stops
-  // after the first buffered chunk. Forcing a seek to the end makes the browser
-  // scan the whole file and learn the real duration; then we reset to the start.
+  // in the header, so the <audio> element reports duration = Infinity and its
+  // scrubber never fills. Forcing a seek to the end makes the browser scan the
+  // whole file and learn the real duration; then we reset to the start. On a
+  // fully-downloaded blob (see blobifyAudio) this scan is instant and reliable.
   // Capture phase because media events (loadedmetadata) don't bubble.
   document.addEventListener('loadedmetadata', function (e) {
     var a = e.target;
@@ -1492,8 +1493,56 @@ window.TRIP_DATA = {
     try { a.currentTime = 1e101; } catch (err) {}
   }, true);
 
+  // A *streamed* voice memo stops after a few seconds: with no duration in the
+  // header the element treats the end of the first buffered chunk as EOF. Local
+  // recordings play fine because they're a complete blob; the synced copy others
+  // hear is streamed, so it cuts off. Fix: download the whole (short) clip into a
+  // blob and swap it in before playback, so every byte is present up front. We
+  // hydrate lazily as each clip nears the viewport, and always before the user
+  // taps play, so the eventual play() stays a native src swap (iOS blocks play()
+  // called after an async fetch inside a tap handler).
+  var audioObserver = null;
+  function blobifyAudio(a) {
+    if (!a || a.dataset.blobbed || a.dataset.blobbing) return;
+    var remote = a.dataset.remoteSrc;
+    if (!remote) return;
+    a.dataset.blobbing = '1';
+    fetch(remote).then(function (r) { return r.ok ? r.blob() : Promise.reject(); }).then(function (b) {
+      delete a.dataset.blobbing;
+      a.dataset.blobbed = '1';
+      var wasPlaying = !a.paused, pos = a.currentTime;
+      a.src = URL.createObjectURL(b);
+      // If the swap lands mid-playback (rare), restore position and resume.
+      if (wasPlaying || pos > 0) {
+        a.addEventListener('loadedmetadata', function once() {
+          a.removeEventListener('loadedmetadata', once);
+          try { a.currentTime = pos; } catch (e) {}
+          if (wasPlaying) a.play().catch(function () {});
+        }, { once: true });
+      }
+    }).catch(function () { delete a.dataset.blobbing; });
+  }
+  function hydrateAudio(root) {
+    var els = (root || document).querySelectorAll('.note-audio[data-remote-src]:not([data-blobbed])');
+    if (!els.length) return;
+    if (!('IntersectionObserver' in window)) { Array.prototype.forEach.call(els, blobifyAudio); return; }
+    if (!audioObserver) {
+      audioObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { blobifyAudio(en.target); audioObserver.unobserve(en.target); }
+        });
+      }, { rootMargin: '300px' });
+    }
+    Array.prototype.forEach.call(els, function (a) { audioObserver.observe(a); });
+  }
+
   function audioHTML(n) {
-    if (n.audio_path) return '<audio class="note-audio" controls preload="none" src="' + esc(publicUrl(n.audio_path)) + '"></audio>';
+    if (n.audio_path) {
+      var au = esc(publicUrl(n.audio_path));
+      // src stays set so an early tap still plays (streamed); blobifyAudio swaps
+      // in the complete blob before that, so it plays through to the end.
+      return '<audio class="note-audio" controls preload="metadata" src="' + au + '" data-remote-src="' + au + '"></audio>';
+    }
     if (n._local && n.audio_blob) { try { return '<audio class="note-audio" controls src="' + URL.createObjectURL(n.audio_blob) + '"></audio>'; } catch (e) {} }
     return '';
   }
@@ -1558,6 +1607,7 @@ window.TRIP_DATA = {
           reactionsHTML(n.id) + repliesHTML(n.id) + '</div>';
       }).join('');
       listEl.innerHTML = html;
+      hydrateAudio(listEl);
 
       list.forEach(function (n) {
         if (!n._local) return;
