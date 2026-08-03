@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v63';
+const CACHE = 'outback-loop-v64';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
 const ASSETS = [
   './index.html',
@@ -73,9 +73,9 @@ self.addEventListener('fetch', function (e) {
   // Supabase: cache public storage images (photos/avatars) so they show offline
   // once seen; never cache auth / REST data / functions (those must stay fresh).
   if (url.hostname.endsWith('.supabase.co')) {
-    // Audio clips: let the browser fetch them natively so Range requests (seeking,
-    // and the duration-probe that fixes cut-off playback) work — don't intercept.
-    if (/\.(m4a|mp4|webm|ogg|oga|aac|mp3)$/i.test(url.pathname)) return;
+    // Audio + video clips: let the browser fetch them natively so Range requests
+    // (seeking) work, and so we don't bloat the cache with big media files.
+    if (/\.(m4a|mp4|m4v|mov|webm|ogv|ogg|oga|aac|mp3)$/i.test(url.pathname)) return;
     if (url.pathname.indexOf('/storage/v1/object/public/') === 0) {
       e.respondWith(
         caches.open(IMG_CACHE).then(function (c) {

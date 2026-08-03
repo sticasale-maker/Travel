@@ -7,6 +7,7 @@
   function t(k) { return I18N ? I18N.t(k) : k; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function pub(path) { return CFG.SUPABASE_URL + '/storage/v1/object/public/travel-photos/' + path; }
+  function isVid(s) { return /\.(mp4|m4v|mov|webm|ogv)$/i.test(s || ''); }
 
   function readCache() {
     return new Promise(function (resolve) {
@@ -28,11 +29,14 @@
     document.body.appendChild(ov);
     ov.addEventListener('click', function (e) {
       if (e.target === ov || e.target.closest('.overlay-close')) { ov.remove(); return; }
-      var img = e.target.closest('.gal-grid img');
-      if (img) {
+      var cell = e.target.closest('.gal-grid [data-full]');
+      if (cell) {
+        var full = cell.dataset.full, vid = cell.dataset.vid === '1';
         var lb = document.createElement('div'); lb.className = 'lightbox';
-        lb.innerHTML = '<img src="' + esc(img.dataset.full) + '" alt="">';
-        lb.addEventListener('click', function () { lb.remove(); });
+        lb.innerHTML = vid
+          ? '<video src="' + esc(full) + '" controls autoplay playsinline></video>'
+          : '<img src="' + esc(full) + '" alt="">';
+        lb.addEventListener('click', function (ev) { if (ev.target.tagName !== 'VIDEO') lb.remove(); });
         document.body.appendChild(lb);
       }
     });
@@ -40,14 +44,16 @@
     readCache().then(function (notes) {
       var photos = [];
       notes.forEach(function (n) {
-        (n.photo_paths || []).forEach(function (p) { photos.push({ url: pub(p), author: n.author, at: n.captured_at }); });
+        (n.photo_paths || []).forEach(function (p) { photos.push({ url: pub(p), vid: isVid(p), author: n.author, at: n.captured_at }); });
       });
       photos.sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); });
       var grid = ov.querySelector('.gal-grid');
       if (!photos.length) { grid.innerHTML = '<div class="gal-empty">' + t('gallery_empty') + '</div>'; return; }
       grid.innerHTML = photos.map(function (p) {
-        return '<figure><img loading="lazy" src="' + esc(p.url) + '" data-full="' + esc(p.url) + '" alt="">' +
-          '<figcaption>' + esc(p.author || '') + '</figcaption></figure>';
+        var media = p.vid
+          ? '<video src="' + esc(p.url) + '#t=0.1" muted playsinline preload="metadata" data-full="' + esc(p.url) + '" data-vid="1"></video><span class="gal-play">▶</span>'
+          : '<img loading="lazy" src="' + esc(p.url) + '" data-full="' + esc(p.url) + '" alt="">';
+        return '<figure>' + media + '<figcaption>' + esc(p.author || '') + '</figcaption></figure>';
       }).join('');
     });
   };

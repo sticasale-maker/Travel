@@ -81,6 +81,7 @@
       reply_ph: 'Leave a reply…', reply_send: 'Send', reader_name_prompt: 'Your name (shown on replies):',
       // voice
       record: 'Record voice', stop: 'Stop', recording: 'Recording…', rerecord: 'Re-record', mic_denied: 'Mic blocked',
+      video_too_big: 'That video is too large to upload — please pick a shorter clip (under 50 MB).',
       // map
       map_directions: 'Tap for directions',
       map_pin: 'Tap · Google Maps',
@@ -158,6 +159,7 @@
       gallery_empty: 'Ancora nessuna foto — compariranno qui quando qualcuno pubblica (apri una volta online).',
       reply_ph: 'Lascia una risposta…', reply_send: 'Invia', reader_name_prompt: 'Il tuo nome (mostrato sulle risposte):',
       record: 'Registra voce', stop: 'Stop', recording: 'Registrazione…', rerecord: 'Registra di nuovo', mic_denied: 'Microfono bloccato',
+      video_too_big: 'Il video è troppo grande da caricare — scegli una clip più corta (sotto i 50 MB).',
       map_directions: 'Tocca per le indicazioni',
       map_pin: 'Tocca · Google Maps',
       reader_note_title: 'Come funziona questa pagina.',

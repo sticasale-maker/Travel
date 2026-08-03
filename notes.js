@@ -22,6 +22,7 @@
   var CONFIGURED = CFG.SUPABASE_URL && CFG.SUPABASE_URL.indexOf('YOUR-PROJECT') === -1 &&
                    CFG.SUPABASE_ANON_KEY && CFG.SUPABASE_ANON_KEY.indexOf('YOUR-') === -1;
   var BUCKET = 'travel-photos';
+  var VIDEO_MAX_BYTES = (CFG.VIDEO_MAX_MB || 50) * 1024 * 1024; // cap so uploads don't fail on the road
 
   var state = { sb: null, uid: null, remote: [], profiles: {}, profilesByName: {}, reactions: {}, replies: {}, replyLikes: {}, syncing: false, attempts: {}, booted: false };
   var REACTIONS = ['❤️', '😂', '🔥', '👏'];
@@ -408,7 +409,8 @@
       pending.forEach(function (p) {
         chain = chain.then(function () {
           var path = state.uid + '/' + n.id + '/' + p.filename;
-          return state.sb.storage.from(BUCKET).upload(path, p.blob, { contentType: 'image/jpeg', upsert: true })
+          var ctype = isVideoName(p.filename) ? ((p.blob && p.blob.type) || 'video/mp4') : 'image/jpeg';
+          return state.sb.storage.from(BUCKET).upload(path, p.blob, { contentType: ctype, upsert: true })
             .then(function (res) { if (res.error) throw res.error; if (paths.indexOf(path) === -1) paths.push(path); p.uploaded = true; p.path = path; return putPhoto(p); });
         });
       });
@@ -487,13 +489,22 @@
     return list;
   }
 
+  // A media item is a video if its stored name/path ends in a video extension;
+  // everything else is a (jpeg) photo. Videos render as an inline <video> with
+  // native controls (no lightbox); photos keep the tap-to-zoom <img>.
+  var VIDEO_RE = /\.(mp4|m4v|mov|webm|ogv)$/i;
+  function isVideoName(s) { return VIDEO_RE.test(s || ''); }
+  function mediaTag(url, video, lazy) {
+    if (video) return '<video src="' + esc(url) + '" controls playsinline preload="metadata"></video>';
+    return '<img ' + (lazy ? 'loading="lazy" ' : '') + 'src="' + esc(url) + '" data-full="' + esc(url) + '" alt="">';
+  }
   function photoHTML(n) {
     var out = '';
-    (n.photo_paths || []).forEach(function (p) { var url = publicUrl(p); if (url) out += '<img loading="lazy" src="' + esc(url) + '" data-full="' + esc(url) + '" alt="">'; });
+    (n.photo_paths || []).forEach(function (p) { var url = publicUrl(p); if (url) out += mediaTag(url, isVideoName(p), true); });
     return out;
   }
   function localPhotoHTML(photos) {
-    var out = ''; (photos || []).forEach(function (p) { var url = URL.createObjectURL(p.blob); out += '<img src="' + url + '" data-full="' + url + '" alt="">'; }); return out;
+    var out = ''; (photos || []).forEach(function (p) { var url = URL.createObjectURL(p.blob); out += mediaTag(url, isVideoName(p.filename || (p.blob && p.blob.type) || ''), false); }); return out;
   }
 
   // Voice memos are played through the Web Audio API rather than a native
@@ -749,7 +760,7 @@
     form.innerHTML = picker +
       '<textarea placeholder="' + esc(t('form_placeholder')) + '">' + esc(editText) + '</textarea>' +
       '<div class="hint">' + esc(t('form_hint')) + '</div>' +
-      '<div class="file-row"><input type="file" accept="image/*" multiple></div>' +
+      '<div class="file-row"><input type="file" accept="image/*,video/*" multiple></div>' +
       '<div class="thumbs"></div>' +
       '<div class="voice-row"></div>' +
       '<div class="form-actions"><button class="save" type="button">' + esc(t('save_memory')) + '</button>' +
@@ -776,7 +787,24 @@
     var ta = form.querySelector('textarea'), fileInput = form.querySelector('input[type=file]'), thumbs = form.querySelector('.thumbs');
     fileInput.addEventListener('change', function () {
       var files = Array.prototype.slice.call(fileInput.files || []); fileInput.value = '';
-      files.forEach(function (f) { shrink(f).then(function (blob) { var filename = uuid() + '.jpg', url = URL.createObjectURL(blob); pending.push({ blob: blob, filename: filename, url: url }); var img = document.createElement('img'); img.src = url; thumbs.appendChild(img); }); });
+      files.forEach(function (f) {
+        if ((f.type || '').indexOf('video/') === 0) {
+          // Videos: keep the file as-is (no canvas shrink). Guard very large clips
+          // so uploads don't fail on the road; keep memos short.
+          if (f.size > VIDEO_MAX_BYTES) { alert(t('video_too_big')); return; }
+          var vext = (f.name.match(/\.(mp4|m4v|mov|webm|ogv)$/i) || [, 'mp4'])[1].toLowerCase();
+          var vname = uuid() + '.' + vext, vurl = URL.createObjectURL(f);
+          pending.push({ blob: f, filename: vname, url: vurl });
+          var vid = document.createElement('video'); vid.src = vurl; vid.muted = true; vid.playsInline = true; vid.preload = 'metadata';
+          thumbs.appendChild(vid);
+        } else {
+          shrink(f).then(function (blob) {
+            var filename = uuid() + '.jpg', url = URL.createObjectURL(blob);
+            pending.push({ blob: blob, filename: filename, url: url });
+            var img = document.createElement('img'); img.src = url; thumbs.appendChild(img);
+          });
+        }
+      });
     });
     // voice recording (feature-detected; hidden where unsupported)
     var rec = null;
