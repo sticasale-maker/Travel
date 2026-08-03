@@ -372,7 +372,9 @@
 
   // ---------------------------------------------------------------- sync
   function backoffReady(id) { var a = state.attempts[id]; return !a || Date.now() >= a.nextTry; }
-  function noteFailed(id) { var a = state.attempts[id] || { count: 0 }; a.count += 1; a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1)); state.attempts[id] = a; }
+  function noteFailed(id, err) { var a = state.attempts[id] || { count: 0 }; a.count += 1; a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1));
+    if (err) { try { a.err = err.message || err.error_description || err.error || (typeof err === 'string' ? err : JSON.stringify(err)); } catch (e) { a.err = 'upload failed'; } }
+    state.attempts[id] = a; }
   function noteOK(id) { delete state.attempts[id]; }
 
   // upsert a row; if the DB doesn't have avatar_path yet, retry without it so
@@ -459,7 +461,7 @@
             .sort(function (a, b) { return (a.captured_at || '').localeCompare(b.captured_at || ''); });
           var chain = Promise.resolve();
           pending.forEach(function (n) {
-            chain = chain.then(function () { return syncNote(n).then(function () { noteOK(n.id); }).catch(function () { noteFailed(n.id); }); });
+            chain = chain.then(function () { return syncNote(n).then(function () { noteOK(n.id); }).catch(function (err) { noteFailed(n.id, err); }); });
           });
           return chain;
         });
@@ -686,7 +688,11 @@
       var html = list.map(function (n) {
         var mine = myNote(n), body = pickBody(n), name = displayName(n), av = noteAvatarURL(n);
         var badges = '';
-        if (n._pending) badges += '<span class="note-badge pending">' + esc(t('badge_pending')) + '</span>';
+        if (n._pending) {
+          badges += '<span class="note-badge pending">' + esc(t('badge_pending')) + '</span>';
+          var at = state.attempts[n.id];
+          if (at && at.err) badges += '<span class="note-badge err" title="' + esc(at.err) + '">⚠ ' + esc(String(at.err).slice(0, 80)) + '</span>';
+        }
         if (body.translated) badges += '<span class="note-badge tr">' + esc(t('translated_from')) + '</span>';
         var actions = '';
         if (MODE === 'poster' && mine) {

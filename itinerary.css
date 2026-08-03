@@ -316,6 +316,7 @@ footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line-strong
 .note-badge{font-family:'Space Mono',monospace; font-size:9.5px; letter-spacing:.06em;
   text-transform:uppercase; font-weight:700; padding:2px 7px; border-radius:12px;}
 .note-badge.pending{background:#F3E0BE; color:#8a5b12; border:1px solid var(--camp-line);}
+.note-badge.err{background:#F6D9CE; color:#8a3a1a; border:1px solid #C8744A; text-transform:none; letter-spacing:0; max-width:100%; overflow:hidden; text-overflow:ellipsis;}
 .note-badge.mine{background:var(--spinifex); color:#fff;}
 .note-badge.tr{background:#E3EAE0; color:#4C5D38; border:1px solid #C4D2B8;}
 .note-actions{display:flex; gap:12px; margin-top:8px;}
