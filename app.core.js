@@ -1397,25 +1397,30 @@ window.TRIP_DATA = {
     return photosFor(n.id).then(function (photos) {
       var pending = photos.filter(function (p) { return !p.uploaded; });
       var paths = (n.photo_paths || []).slice();
+      var mediaErr = null;   // first media that couldn't upload this pass
       var chain = Promise.resolve();
       pending.forEach(function (p) {
         chain = chain.then(function () {
           var path = state.uid + '/' + n.id + '/' + p.filename;
           var ctype = isVideoName(p.filename) ? ((p.blob && p.blob.type) || 'video/mp4') : 'image/jpeg';
           return state.sb.storage.from(BUCKET).upload(path, p.blob, { contentType: ctype, upsert: true })
-            .then(function (res) { if (res.error) throw res.error; if (paths.indexOf(path) === -1) paths.push(path); p.uploaded = true; p.path = path; return putPhoto(p); });
+            .then(function (res) { if (res.error) throw res.error; if (paths.indexOf(path) === -1) paths.push(path); p.uploaded = true; p.path = path; return putPhoto(p); })
+            // A single slow/failing clip must NOT block the whole post. Record it,
+            // keep going, and post with whatever uploaded; it retries next sync.
+            .catch(function (err) { if (!mediaErr) mediaErr = err; });
         });
       });
       return chain.then(function () {
         n.photo_paths = paths;
-        // upload a voice memory if one is attached and not yet uploaded
+        // upload a voice memory if one is attached and not yet uploaded (best-effort)
+        var audioPending = !!(n.audio_blob && !n.audio_path);
         var audioP = Promise.resolve();
-        if (n.audio_blob && !n.audio_path) {
+        if (audioPending) {
           var ty = n.audio_blob.type || '';
           var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
           var apath = state.uid + '/' + n.id + '/audio.' + ext;
           audioP = state.sb.storage.from(BUCKET).upload(apath, n.audio_blob, { contentType: ty || 'audio/mp4', upsert: true })
-            .then(function (res) { if (!res.error) n.audio_path = apath; }).catch(function () {});
+            .then(function (res) { if (!res.error) { n.audio_path = apath; audioPending = false; } }).catch(function () {});
         }
         return audioP.then(function () {
         // fill the author's avatar path (uploaded above) if we didn't have it yet
@@ -1427,11 +1432,22 @@ window.TRIP_DATA = {
           photo_paths: paths, captured_at: n.captured_at, updated_at: nowISO(),
           avatar_path: n.avatar_path || '', audio_path: n.audio_path || ''
         };
+        // Insert the row now — the post goes live and the new-post notification
+        // fires — even if a clip is still uploading. Remaining media is added on
+        // later syncs (re-upsert; the insert-only notification won't re-fire).
         return upsertRow(row).then(function (res) {
-          if (res.error) throw res.error;
-          n.synced = true; n.pending_op = null; n.user_id = state.uid;
-          return putNote(n).then(function () {
-            if (row.body) return state.sb.functions.invoke('translate-note', { body: { id: n.id } }).catch(function () {});
+          if (res.error) throw res.error;   // the row itself failed → real failure, retry all
+          n.user_id = state.uid;
+          var allDone = !mediaErr && !audioPending;
+          if (allDone) { n.synced = true; n.pending_op = null; }
+          var translate = (row.body && !n._translated)
+            ? state.sb.functions.invoke('translate-note', { body: { id: n.id } }).then(function () { n._translated = true; }).catch(function () {})
+            : Promise.resolve();
+          return translate.then(function () {
+            return putNote(n).then(function () {
+              // Media still outstanding: surface it (⚠ badge) and let backoff retry.
+              if (!allDone) throw mediaErr || new Error('media still uploading');
+            });
           });
         });
         }); // audioP.then
