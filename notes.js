@@ -795,14 +795,21 @@
       var files = Array.prototype.slice.call(fileInput.files || []); fileInput.value = '';
       files.forEach(function (f) {
         if ((f.type || '').indexOf('video/') === 0) {
-          // Videos: keep the file as-is (no canvas shrink). Guard very large clips
-          // so uploads don't fail on the road; keep memos short.
           if (f.size > VIDEO_MAX_BYTES) { alert(t('video_too_big')); return; }
           var vext = (f.name.match(/\.(mp4|m4v|mov|webm|ogv)$/i) || [, 'mp4'])[1].toLowerCase();
-          var vname = uuid() + '.' + vext, vurl = URL.createObjectURL(f);
-          pending.push({ blob: f, filename: vname, url: vurl });
-          var vid = document.createElement('video'); vid.src = vurl; vid.muted = true; vid.playsInline = true; vid.preload = 'metadata';
+          var vname = uuid() + '.' + vext;
+          var vid = document.createElement('video'); vid.muted = true; vid.playsInline = true; vid.preload = 'metadata';
           thumbs.appendChild(vid);
+          // Read the picked file into an in-memory blob NOW. A raw File from the
+          // picker is just a reference to the file on disk, and iOS drops that
+          // reference across a reload — the stored video then uploads as 0 bytes
+          // ("no content provided"). Materialising the bytes makes it survive.
+          f.arrayBuffer().then(function (buf) {
+            var vblob = new Blob([buf], { type: f.type || 'video/mp4' });
+            var vurl = URL.createObjectURL(vblob);
+            vid.src = vurl;
+            pending.push({ blob: vblob, filename: vname, url: vurl });
+          }).catch(function () { vid.remove(); alert(t('video_read_failed')); });
         } else {
           shrink(f).then(function (blob) {
             var filename = uuid() + '.jpg', url = URL.createObjectURL(blob);
