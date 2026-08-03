@@ -38,8 +38,8 @@
     } else {
       pct = Math.round(kmSoFar / TD.totalKm * 100);
       headline = t('day_of', { n: '<b>' + dayNum + '</b>', total: TD.totalDays }) +
-        ' · ~<b>' + kmSoFar.toLocaleString() + '</b> km · ' +
-        t(stateCount === 1 ? 'states_n_one' : 'states_n', { n: stateCount });
+        ' · ' + t('km_of_total', { km: '<b>' + kmSoFar.toLocaleString() + '</b>', total: TD.totalKm.toLocaleString() }) +
+        ' · ' + t(stateCount === 1 ? 'states_n_one' : 'states_n', { n: stateCount });
     }
 
     // milestones

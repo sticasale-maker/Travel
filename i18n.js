@@ -72,7 +72,7 @@
       person_edit: 'Edit person',
       // stats / route / gallery
       day_of: 'Day {n} of {total}', states_n: '{n} states', states_n_one: '{n} state',
-      total_km: '{km} km total', days_to_go: 'days to go', days_to_go_one: 'day to go',
+      total_km: '{km} km total', km_of_total: '~{km} of {total} km', days_to_go: 'days to go', days_to_go_one: 'day to go',
       loop_closed: 'Loop closed', welcome_home: 'welcome home',
       route_btn: 'Route', photos_btn: 'Photos',
       route_today: 'Today’s leg', route_full: 'The full loop',
@@ -151,7 +151,7 @@
       person_new: 'Aggiungi una persona',
       person_edit: 'Modifica persona',
       day_of: 'Giorno {n} di {total}', states_n: '{n} stati', states_n_one: '{n} stato',
-      total_km: '{km} km totali', days_to_go: 'giorni alla partenza', days_to_go_one: 'giorno alla partenza',
+      total_km: '{km} km totali', km_of_total: '~{km} di {total} km', days_to_go: 'giorni alla partenza', days_to_go_one: 'giorno alla partenza',
       loop_closed: 'Giro concluso', welcome_home: 'bentornati',
       route_btn: 'Percorso', photos_btn: 'Foto',
       route_today: 'Tappa di oggi', route_full: 'Il giro completo',
