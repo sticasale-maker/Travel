@@ -472,12 +472,22 @@
         var audioPending = !!(n.audio_blob && !n.audio_path);
         var audioP = Promise.resolve();
         if (audioPending) {
-          var ty = n.audio_blob.type || '';
-          var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
-          var apath = state.uid + '/' + n.id + '/audio.' + ext;
-          setProgress(n, 'kind_voice', 0);
-          audioP = uploadWithProgress(apath, n.audio_blob, ty || 'audio/mp4', function (f) { setProgress(n, 'kind_voice', f); })
-            .then(function (res) { if (!res.error) { n.audio_path = apath; audioPending = false; } }).catch(function () {});
+          // Dead/empty audio blob (iOS invalidated the blob across reload, or
+          // recording failed) → abandon it so the post can still post.
+          if (!n.audio_blob || !n.audio_blob.size) { audioPending = false; }
+          else {
+            var ty = n.audio_blob.type || '';
+            var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
+            var apath = state.uid + '/' + n.id + '/audio.' + ext;
+            setProgress(n, 'kind_voice', 0);
+            audioP = withTimeout(uploadWithProgress(apath, n.audio_blob, ty || 'audio/mp4', function (f) { setProgress(n, 'kind_voice', f); }), 90000, 'audio upload')
+              .then(function (res) { if (!res.error) { n.audio_path = apath; audioPending = false; } })
+              .catch(function (err) {
+                var msg = ((err && (err.message || err.error)) || '') + '';
+                if (/no content|content provided|empty/i.test(msg)) { audioPending = false; }
+                // else: retry on next sync; don't throw so the post still goes out
+              });
+          }
         }
         return audioP.then(function () {
         // fill the author's avatar path (uploaded above) if we didn't have it yet
