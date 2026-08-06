@@ -354,6 +354,12 @@ footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line-strong
 .sync-status.pending .dot{background:#F3C48A;}
 .sync-status.offline .dot{background:#c9744a;}
 
+/* live sync progress during uploads */
+.sync-progress{display:inline-flex; flex-direction:column; gap:3px; min-width:180px; font-size:10px; color:var(--paper); opacity:.75;}
+.sp-label{font-family:'Space Mono',monospace; letter-spacing:.02em;}
+.sp-bar{height:3px; background:rgba(255,255,255,.2); border-radius:2px; overflow:hidden;}
+.sp-fill{height:100%; background:linear-gradient(90deg, #8fae6a, #F3C48A); transition:width .3s ease-out; border-radius:2px;}
+
 /* lightbox for full-size photos */
 .lightbox{position:fixed; inset:0; z-index:100; background:rgba(20,15,12,.88);
   display:flex; align-items:center; justify-content:center; padding:20px; cursor:zoom-out;}

@@ -393,6 +393,40 @@
     });
   }
 
+  // Reject a promise if it hasn't settled in `ms` — stops a stalled network
+  // request from freezing the whole sync queue (and the "Saving…" state) forever.
+  function withTimeout(promise, ms, label) {
+    return new Promise(function (resolve, reject) {
+      var to = setTimeout(function () { reject(new Error((label || 'operation') + ' timed out')); }, ms);
+      Promise.resolve(promise).then(function (v) { clearTimeout(to); resolve(v); }, function (e) { clearTimeout(to); reject(e); });
+    });
+  }
+  // Upload to Supabase Storage via XHR so we get real byte-progress (the JS client
+  // doesn't expose upload progress). Returns {data} or {error} like the client.
+  function uploadWithProgress(path, blob, contentType, onProgress) {
+    return state.sb.auth.getSession().then(function (r) {
+      var token = r.data && r.data.session && r.data.session.access_token;
+      return new Promise(function (resolve) {
+        var xhr = new XMLHttpRequest();
+        var url = CFG.SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + path.split('/').map(encodeURIComponent).join('/');
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('authorization', 'Bearer ' + token);
+        xhr.setRequestHeader('apikey', CFG.SUPABASE_ANON_KEY);
+        xhr.setRequestHeader('x-upsert', 'true');
+        if (contentType) xhr.setRequestHeader('content-type', contentType);
+        xhr.upload.onprogress = function (e) { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+        xhr.onload = function () {
+          if (xhr.status >= 200 && xhr.status < 300) resolve({ data: { path: path } });
+          else { var msg = 'upload failed (' + xhr.status + ')'; try { var j = JSON.parse(xhr.responseText); msg = j.message || j.error || msg; } catch (e) {} resolve({ error: { message: msg, statusCode: xhr.status } }); }
+        };
+        xhr.onerror = function () { resolve({ error: { message: 'network error' } }); };
+        xhr.ontimeout = function () { resolve({ error: { message: 'upload timed out' } }); };
+        xhr.timeout = 120000;
+        xhr.send(blob);
+      });
+    });
+  }
+
   function syncNote(n) {
     if (n.pending_op === 'delete') {
       var paths = n.photo_paths || [];
@@ -409,15 +443,27 @@
       var paths = (n.photo_paths || []).slice();
       var mediaErr = null;   // first media that couldn't upload this pass
       var chain = Promise.resolve();
+      var dropped = false;
       pending.forEach(function (p) {
         chain = chain.then(function () {
+          // A dead/empty blob (e.g. an old clip whose bytes iOS already dropped)
+          // can never upload — abandon it so the post can still post, rather than
+          // retrying "Saving…" forever.
+          if (!p.blob || !p.blob.size) { p.uploaded = true; p.failed = true; dropped = true; return putPhoto(p); }
           var path = state.uid + '/' + n.id + '/' + p.filename;
-          var ctype = isVideoName(p.filename) ? ((p.blob && p.blob.type) || 'video/mp4') : 'image/jpeg';
-          return state.sb.storage.from(BUCKET).upload(path, p.blob, { contentType: ctype, upsert: true })
+          var isVid = isVideoName(p.filename);
+          var ctype = isVid ? ((p.blob && p.blob.type) || 'video/mp4') : 'image/jpeg';
+          setProgress(n, isVid ? 'kind_video' : 'kind_photo', 0);
+          return uploadWithProgress(path, p.blob, ctype, function (f) { setProgress(n, isVid ? 'kind_video' : 'kind_photo', f); })
             .then(function (res) { if (res.error) throw res.error; if (paths.indexOf(path) === -1) paths.push(path); p.uploaded = true; p.path = path; return putPhoto(p); })
-            // A single slow/failing clip must NOT block the whole post. Record it,
-            // keep going, and post with whatever uploaded; it retries next sync.
-            .catch(function (err) { if (!mediaErr) mediaErr = err; });
+            // A single slow/failing clip must NOT block the whole post. If the
+            // server says the content is empty, it's unrecoverable → drop it;
+            // otherwise record it and retry next sync while the post still goes out.
+            .catch(function (err) {
+              var msg = ((err && (err.message || err.error)) || '') + '';
+              if (/no content|content provided|empty/i.test(msg)) { p.uploaded = true; p.failed = true; dropped = true; return putPhoto(p); }
+              if (!mediaErr) mediaErr = err;
+            });
         });
       });
       return chain.then(function () {
@@ -429,7 +475,8 @@
           var ty = n.audio_blob.type || '';
           var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
           var apath = state.uid + '/' + n.id + '/audio.' + ext;
-          audioP = state.sb.storage.from(BUCKET).upload(apath, n.audio_blob, { contentType: ty || 'audio/mp4', upsert: true })
+          setProgress(n, 'kind_voice', 0);
+          audioP = uploadWithProgress(apath, n.audio_blob, ty || 'audio/mp4', function (f) { setProgress(n, 'kind_voice', f); })
             .then(function (res) { if (!res.error) { n.audio_path = apath; audioPending = false; } }).catch(function () {});
         }
         return audioP.then(function () {
@@ -468,7 +515,7 @@
   function syncNow() {
     if (MODE !== 'poster' || !state.sb || state.syncing || !navigator.onLine) return Promise.resolve();
     state.syncing = true;
-    return ensureAuth().then(function () {
+    var work = ensureAuth().then(function () {
       if (!state.uid) return;
       return uploadAvatars().then(propagateAvatars).then(syncProfiles).then(syncPeople).then(function () {
         return allNotes().then(function (notes) {
@@ -477,13 +524,16 @@
             .sort(function (a, b) { return (a.captured_at || '').localeCompare(b.captured_at || ''); });
           var chain = Promise.resolve();
           pending.forEach(function (n) {
-            chain = chain.then(function () { return syncNote(n).then(function () { noteOK(n.id); }).catch(function (err) { noteFailed(n.id, err); }); });
+            // Per-note timeout: one stalled post can't hold up the rest of the queue.
+            chain = chain.then(function () { return withTimeout(syncNote(n), 180000, 'sync').then(function () { noteOK(n.id); }).catch(function (err) { noteFailed(n.id, err); }); });
           });
           return chain;
         });
       });
-    }).then(function () { return Promise.all([fetchRemote(), fetchProfiles(), fetchSocial(), fetchPeople()]); })
-      .catch(function () {}).then(function () { state.syncing = false; renderAll(); });
+    }).then(function () { return Promise.all([fetchRemote(), fetchProfiles(), fetchSocial(), fetchPeople()]); });
+    // Overall guard: whatever happens, the "syncing" flag is released so the
+    // queue never gets permanently wedged by a hung request.
+    return withTimeout(work, 300000, 'sync').catch(function () {}).then(function () { state.syncing = false; clearProgress(); renderAll(); });
   }
 
   // ---------------------------------------------------------------- rendering
@@ -1101,7 +1151,25 @@
       else if (pend) { el.classList.add('pending'); label = t('sync_syncing', { n: pend }); }
       else label = t('sync_synced');
       el.innerHTML = '<span class="dot"></span>' + esc(label);
+      if (!pend) clearProgress();
     });
+  }
+
+  // Live "what's uploading right now, and how far" line in the header.
+  function setProgress(n, kindKey, frac) {
+    state.progress = { who: (n.author || t('follow_home')), kind: t(kindKey), pct: Math.max(0, Math.min(100, Math.round((frac || 0) * 100))) };
+    paintProgress();
+  }
+  function clearProgress() { state.progress = null; paintProgress(); }
+  function paintProgress() {
+    var el = document.getElementById('sync-progress');
+    if (!el) return;
+    var p = state.progress;
+    if (!p) { el.hidden = true; return; }
+    el.hidden = false;
+    var lbl = el.querySelector('.sp-label'), fill = el.querySelector('.sp-fill');
+    if (lbl) lbl.textContent = t('sync_item', { who: p.who, kind: p.kind }) + ' · ' + p.pct + '%';
+    if (fill) fill.style.width = p.pct + '%';
   }
 
   // -------------------------------------------------------- unread app badge
