@@ -1139,6 +1139,8 @@ window.TRIP_DATA = {
         if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('photos'))
           db.createObjectStore('photos', { keyPath: 'id' }).createIndex('note_id', 'note_id', { unique: false });
+        if (!db.objectStoreNames.contains('audio'))
+          db.createObjectStore('audio', { keyPath: 'id' }).createIndex('note_id', 'note_id', { unique: false });
         // cache of everyone's entries (fetched from the server) for offline reading
         if (!db.objectStoreNames.contains('remote')) db.createObjectStore('remote', { keyPath: 'id' });
       };
@@ -1154,6 +1156,9 @@ window.TRIP_DATA = {
   function putPhoto(p) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.put(p)); }); }
   function delPhoto(id) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
   function photosFor(id) { return tx('photos', 'readonly').then(function (s) { return idbReq(s.index('note_id').getAll(id)); }); }
+  function putAudio(a) { return tx('audio', 'readwrite').then(function (s) { return idbReq(s.put(a)); }); }
+  function delAudio(id) { return tx('audio', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
+  function audioFor(noteId) { return tx('audio', 'readonly').then(function (s) { return idbReq(s.index('note_id').getAll(noteId)); }); }
   // remote-entry cache (so everyone's entries read offline)
   function cacheRemote(rows) {
     return openDB().then(function (db) {
@@ -1433,6 +1438,7 @@ window.TRIP_DATA = {
         .then(function (res) {
           if (res.error) throw res.error;
           return photosFor(n.id).then(function (ps) { return Promise.all(ps.map(function (p) { return delPhoto(p.id); })); })
+            .then(function () { return audioFor(n.id).then(function (as) { return Promise.all(as.map(function (a) { return delAudio(a.id); })); }); })
             .then(function () { return delNote(n.id); });
         });
     }
@@ -1467,27 +1473,33 @@ window.TRIP_DATA = {
       return chain.then(function () {
         n.photo_paths = paths;
         // upload a voice memory if one is attached and not yet uploaded (best-effort)
-        var audioPending = !!(n.audio_blob && !n.audio_path);
-        var audioP = Promise.resolve();
-        if (audioPending) {
-          // Dead/empty audio blob (iOS invalidated the blob across reload, or
-          // recording failed) → abandon it so the post can still post.
-          if (!n.audio_blob || !n.audio_blob.size) { audioPending = false; }
-          else {
-            var ty = n.audio_blob.type || '';
-            var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
-            var apath = state.uid + '/' + n.id + '/audio.' + ext;
-            setProgress(n, 'kind_voice', 0);
-            audioP = withTimeout(uploadWithProgress(apath, n.audio_blob, ty || 'audio/mp4', function (f) { setProgress(n, 'kind_voice', f); }), 90000, 'audio upload')
-              .then(function (res) { if (!res.error) { n.audio_path = apath; audioPending = false; } })
-              .catch(function (err) {
-                var msg = ((err && (err.message || err.error)) || '') + '';
-                if (/no content|content provided|empty/i.test(msg)) { audioPending = false; }
-                // else: retry on next sync; don't throw so the post still goes out
-              });
+        return audioFor(n.id).then(function (audioRecs) {
+          var audioRec = audioRecs && audioRecs[0];
+          var audioBlob = audioBlobCache[n.id] || (audioRec && audioRec.blob);
+          var audioPending = !!(audioBlob && !n.audio_path);
+          var audioP = Promise.resolve();
+          var audioCleanup = Promise.resolve();
+          if (audioPending) {
+            // Dead/empty audio blob → abandon it so the post can still post.
+            if (!audioBlob || !audioBlob.size) {
+              audioPending = false;
+              if (audioRec) audioCleanup = delAudio(audioRec.id);
+            }
+            else {
+              var ty = audioBlob.type || '';
+              var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
+              var apath = state.uid + '/' + n.id + '/audio.' + ext;
+              setProgress(n, 'kind_voice', 0);
+              audioP = withTimeout(uploadWithProgress(apath, audioBlob, ty || 'audio/mp4', function (f) { setProgress(n, 'kind_voice', f); }), 90000, 'audio upload')
+                .then(function (res) { if (!res.error) { n.audio_path = apath; audioPending = false; delete audioBlobCache[n.id]; if (audioRec) audioCleanup = delAudio(audioRec.id); } })
+                .catch(function (err) {
+                  var msg = ((err && (err.message || err.error)) || '') + '';
+                  if (/no content|content provided|empty/i.test(msg)) { audioPending = false; delete audioBlobCache[n.id]; if (audioRec) audioCleanup = delAudio(audioRec.id); }
+                  // else: retry on next sync; don't throw so the post still goes out
+                });
+            }
           }
-        }
-        return audioP.then(function () {
+          return audioP.then(function () { return audioCleanup; }).then(function () {
         // fill the author's avatar path (uploaded above) if we didn't have it yet
         if (!n.avatar_path && n.person_key) { var pr = personById(n.person_key); if (pr && pr.avatarPath) n.avatar_path = pr.avatarPath; }
         var row = {
@@ -1515,8 +1527,9 @@ window.TRIP_DATA = {
             });
           });
         });
-        }); // audioP.then
-      });
+        }); // audioCleanup.then
+          });
+        });
     });
   }
 
@@ -1592,6 +1605,7 @@ window.TRIP_DATA = {
   // buffer end to end. We render our own play/pause + progress UI on top.
   var VCTX = null, vActive = null;   // vActive = stop() of whichever memo is currently sounding
   var vPlayingEl = null, vDeferred = []; // the playing .vmemo, and days whose re-render we deferred
+  var audioBlobCache = {}; // store audio blobs in memory; don't persist to IndexedDB (iOS invalidates Blobs like Files)
   function vctx() { VCTX = VCTX || new (window.AudioContext || window.webkitAudioContext)(); return VCTX; }
   function vfmt(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
   function vStopActive() { if (vActive) { var f = vActive; vActive = null; try { f(); } catch (e) {} } }
@@ -1710,7 +1724,7 @@ window.TRIP_DATA = {
   }
   function audioHTML(n) {
     if (n.audio_path) return voicePlayerHTML(publicUrl(n.audio_path));
-    if (n._local && n.audio_blob) { try { return voicePlayerHTML(URL.createObjectURL(n.audio_blob)); } catch (e) {} }
+    if (n._local) { var blob = audioBlobCache[n.id]; if (blob) { try { return voicePlayerHTML(URL.createObjectURL(blob)); } catch (e) {} } }
     return '';
   }
   function reactionsHTML(noteId) {
@@ -1951,13 +1965,14 @@ window.TRIP_DATA = {
     }
     base.body = body;
     base.body_en = ''; base.body_it = ''; base.lang = lang(); // server auto-detects
-    if (pendingAudio) { base.audio_blob = pendingAudio; base.audio_path = ''; }
+    if (pendingAudio) { audioBlobCache[id] = pendingAudio; base.audio_path = ''; }
     base.updated_at = nowISO();
     base.synced = false;
     base.pending_op = editNote ? 'update' : 'create';
     base._local = true;
     return putNote(base).then(function () {
       var chain = Promise.resolve();
+      if (pendingAudio) { chain = chain.then(function () { return putAudio({ id: id, note_id: id, blob: pendingAudio, uploaded: false }); }); }
       pendingPhotos.forEach(function (p) { chain = chain.then(function () { return putPhoto({ id: uuid(), note_id: id, blob: p.blob, filename: p.filename, uploaded: false }); }); });
       return chain;
     });
