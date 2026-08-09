@@ -1505,7 +1505,7 @@ window.TRIP_DATA = {
           // Failed too many times: stop blocking the post so the text + photos go
           // out now. The recording is NOT discarded — the bytes stay in IndexedDB
           // and the note keeps an audio_stuck marker so it can be retried later.
-          else if (state.attempts[n.id] && state.attempts[n.id].count > 3) { audioPending = false; n.audio_stuck = true; }
+          else if (n.audio_stuck || (state.attempts[n.id] && state.attempts[n.id].count > 3)) { audioPending = false; n.audio_stuck = true; }
           else {
             var ty = audioBlob.type || '';
             var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
@@ -1559,28 +1559,44 @@ window.TRIP_DATA = {
     });
   }
 
+  function syncPendingNotes() {
+    return allNotes().then(function (notes) {
+      var pending = notes.filter(function (n) { return !n.synced && n.pending_op; })
+        .filter(function (n) { return backoffReady(n.id); })
+        .sort(function (a, b) { return (a.captured_at || '').localeCompare(b.captured_at || ''); });
+      var chain = Promise.resolve();
+      pending.forEach(function (n) {
+        // Per-note timeout: one stalled post can't hold up the rest of the queue.
+        chain = chain.then(function () { return withTimeout(syncNote(n), 180000, 'sync').then(function () { noteOK(n.id); }).catch(function (err) { noteFailed(n.id, err); }); });
+      });
+      return chain;
+    });
+  }
+
   function syncNow() {
     if (MODE !== 'poster' || !state.sb || state.syncing || !navigator.onLine) return Promise.resolve();
     state.syncing = true;
+    state.lastSyncErr = '';
     var work = ensureAuth().then(function () {
-      if (!state.uid) return;
-      return uploadAvatars().then(propagateAvatars).then(syncProfiles).then(syncPeople).then(function () {
-        return allNotes().then(function (notes) {
-          var pending = notes.filter(function (n) { return !n.synced && n.pending_op; })
-            .filter(function (n) { return backoffReady(n.id); })
-            .sort(function (a, b) { return (a.captured_at || '').localeCompare(b.captured_at || ''); });
-          var chain = Promise.resolve();
-          pending.forEach(function (n) {
-            // Per-note timeout: one stalled post can't hold up the rest of the queue.
-            chain = chain.then(function () { return withTimeout(syncNote(n), 180000, 'sync').then(function () { noteOK(n.id); }).catch(function (err) { noteFailed(n.id, err); }); });
-          });
-          return chain;
-        });
-      });
-    }).then(function () { return Promise.all([fetchRemote(), fetchProfiles(), fetchSocial(), fetchPeople()]); });
+      if (!state.uid) { state.lastSyncErr = 'not signed in'; return; }
+      // The avatar/profile preamble must NEVER gate the note queue. None of
+      // these supabase-js calls carries a timeout, so one stalled request used
+      // to hang the whole sync: the notes below were never reached, so nothing
+      // was attempted, no per-note error was recorded, and no retry or give-up
+      // rule could ever fire. Time-box it and carry on regardless.
+      var preamble = uploadAvatars().then(propagateAvatars).then(syncProfiles).then(syncPeople);
+      return withTimeout(preamble, 45000, 'profile sync')
+        .catch(function (err) { state.lastSyncErr = 'profile step: ' + ((err && err.message) || err); })
+        .then(syncPendingNotes);
+    }).then(function () {
+      return withTimeout(Promise.all([fetchRemote(), fetchProfiles(), fetchSocial(), fetchPeople()]), 60000, 'refresh').catch(function () {});
+    });
     // Overall guard: whatever happens, the "syncing" flag is released so the
-    // queue never gets permanently wedged by a hung request.
-    return withTimeout(work, 300000, 'sync').catch(function () {}).then(function () { state.syncing = false; clearProgress(); renderAll(); });
+    // queue never gets permanently wedged by a hung request. Record why it
+    // failed — swallowing this silently is what made the queue undiagnosable.
+    return withTimeout(work, 300000, 'sync')
+      .catch(function (err) { if (!state.lastSyncErr) state.lastSyncErr = (err && err.message) || String(err); })
+      .then(function () { state.syncing = false; clearProgress(); renderAll(); });
   }
 
   // ---------------------------------------------------------------- rendering
@@ -2036,6 +2052,7 @@ window.TRIP_DATA = {
     document.addEventListener('click', function (e) {
       var full = e.target.closest('.note-photos img, .note-form .thumbs img');
       if (full && full.dataset.full) { lightbox(full.dataset.full); return; }
+      if (MODE === 'poster' && e.target.closest('#sync-status')) { openSyncDiag(); return; }
       var del = e.target.closest('[data-del]');
       if (del) { if (!confirm(t('confirm_delete'))) return; var dayEl = del.closest('.day'); deleteNote(del.dataset.del).then(function () { renderDay(dayEl); scheduleSync(); }); return; }
       var edit = e.target.closest('[data-edit]');
@@ -2221,6 +2238,76 @@ window.TRIP_DATA = {
       else label = t('sync_synced');
       el.innerHTML = '<span class="dot"></span>' + esc(label);
       if (!pend) clearProgress();
+    });
+  }
+
+  // ---------------------------------------------- sync diagnostics
+  // An installed app has no console, so the queue has to explain itself on
+  // screen. Tapping the "Saving…" status opens this. It deliberately lists
+  // pending DELETES too — those render no note card, so a stuck delete is
+  // otherwise completely invisible while still counting toward the total.
+  function syncDiagHTML(notes) {
+    var pend = notes.filter(function (n) { return !n.synced && n.pending_op; });
+    if (!pend.length) return '<p style="margin:0">Nothing pending — everything is saved.</p>';
+    return '<ul style="list-style:none;padding:0;margin:0">' + pend.map(function (n) {
+      var a = state.attempts[n.id] || {};
+      var wait = a.nextTry ? Math.max(0, Math.round((a.nextTry - Date.now()) / 1000)) : 0;
+      var bits = ['<b>' + esc(n.author || '—') + '</b> · ' + esc(n.day_key || '') + ' · <code>' + esc(n.pending_op) + '</code>'];
+      if (n.body) bits.push(esc(String(n.body).slice(0, 60)));
+      bits.push('tries: ' + (a.count || 0) + (wait ? ' · retry in ' + wait + 's' : ' · ready'));
+      var ab = audioBlobCache[n.id];
+      if (ab) bits.push('voice: ' + Math.round(ab.size / 1024) + ' KB' + (n.audio_stuck ? ' (not uploaded)' : ''));
+      if (a.err) bits.push('<span style="color:#c0392b">⚠ ' + esc(a.err) + '</span>');
+      return '<li style="margin:0 0 12px;line-height:1.45">' + bits.join('<br>') + '</li>';
+    }).join('') + '</ul>';
+  }
+
+  // Manual escape hatch. Resolves everything stuck while preserving content:
+  // deletes are completed locally, posts give up on outstanding media so their
+  // text (and anything already uploaded) goes out. Voice bytes are NOT dropped.
+  function forceResolveStuck() {
+    return allNotes().then(function (notes) {
+      var chain = Promise.resolve();
+      notes.filter(function (n) { return !n.synced && n.pending_op; }).forEach(function (n) {
+        chain = chain.then(function () {
+          if (n.pending_op === 'delete') return purgeLocal(n);
+          n.audio_stuck = true; // stops it blocking; the recording is kept
+          return photosFor(n.id).then(function (ps) {
+            return Promise.all(ps.filter(function (p) { return !p.uploaded; })
+              .map(function (p) { p.uploaded = true; p.failed = true; return putPhoto(p); }));
+          }).then(function () { return putNote(n); });
+        });
+      });
+      return chain;
+    }).then(function () { state.attempts = {}; saveAttempts(); }).then(syncNow);
+  }
+
+  function openSyncDiag() {
+    allNotes().then(function (notes) {
+      var back = document.createElement('div');
+      back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+      var status = state.lastSyncErr ? '⚠ last sync: ' + esc(state.lastSyncErr)
+        : (state.syncing ? 'syncing now…' : (navigator.onLine ? 'idle' : 'offline'));
+      back.innerHTML = '<div style="background:#fff;color:#222;max-width:520px;width:100%;max-height:80vh;overflow:auto;' +
+        'border-radius:14px;padding:18px;font-size:15px">' +
+        '<h3 style="margin:0 0 4px;font-size:17px">Sync queue</h3>' +
+        '<p style="margin:0 0 14px;opacity:.75;font-size:13px">' + status + '</p>' +
+        syncDiagHTML(notes) +
+        '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
+        '<button type="button" data-sd="retry">Retry now</button>' +
+        '<button type="button" data-sd="force">Force-clear stuck</button>' +
+        '<button type="button" data-sd="close" style="margin-left:auto">Close</button>' +
+        '</div></div>';
+      function close() { if (back.parentNode) back.parentNode.removeChild(back); }
+      back.addEventListener('click', function (e) {
+        if (e.target === back || e.target.dataset.sd === 'close') return close();
+        if (e.target.dataset.sd === 'retry') { state.attempts = {}; saveAttempts(); close(); syncNow(); return; }
+        if (e.target.dataset.sd === 'force') {
+          if (!confirm('Clear the stuck queue? Posts will save without any media that will not upload. Voice recordings are kept on this phone.')) return;
+          close(); forceResolveStuck();
+        }
+      });
+      document.body.appendChild(back);
     });
   }
 
