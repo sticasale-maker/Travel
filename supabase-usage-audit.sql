@@ -57,6 +57,7 @@ limit 30;
 -- ---------------------------------------------------------------------------
 -- 4. Orphans: files still in storage that no note references any more.
 --    Deleting these is free space with zero user-visible impact.
+--    TRAVEL PROJECT ONLY (jvcijeecbpzylzwoutch) — skip in the other project.
 -- ---------------------------------------------------------------------------
 with referenced as (
   select unnest(photo_paths) as path from public.travel_notes
@@ -96,9 +97,9 @@ where o.bucket_id = 'travel-photos'
 --    storage, the tables only hold paths. If this is large, something is wrong.
 -- ---------------------------------------------------------------------------
 select
-  relname                                          as table,
+  c.relname                                        as table_name,
   pg_size_pretty(pg_total_relation_size(c.oid))    as total_size,
-  n_live_tup                                       as rows
+  s.n_live_tup                                     as live_rows
 from pg_class c
 join pg_namespace ns on ns.oid = c.relnamespace
 left join pg_stat_user_tables s on s.relid = c.oid
@@ -108,8 +109,10 @@ order by pg_total_relation_size(c.oid) desc;
 -- ---------------------------------------------------------------------------
 -- 6. Row counts on the tables the app polls every 60s with select('*').
 --    Every open tab pulls all of these rows, in full, once a minute.
+--    TRAVEL PROJECT ONLY (jvcijeecbpzylzwoutch) — these table names do not
+--    exist in the Manly swim / Forecast / Godiving project.
 -- ---------------------------------------------------------------------------
-select 'travel_notes' as t, count(*) from public.travel_notes
+select 'travel_notes' as table_name, count(*) as rows from public.travel_notes
 union all select 'reactions',    count(*) from public.reactions
 union all select 'note_replies', count(*) from public.note_replies
 union all select 'reply_likes',  count(*) from public.reply_likes
@@ -122,5 +125,8 @@ union all select 'trip_flags',   count(*) from public.trip_flags;
 --    poster has no session — a new row here per phone per storage wipe. These
 --    count toward MAU.
 -- ---------------------------------------------------------------------------
-select count(*) as anon_users, min(created_at) as first, max(created_at) as latest
+select
+  count(*)        as anon_users,
+  min(created_at) as first_seen,
+  max(created_at) as latest_seen
 from auth.users;
