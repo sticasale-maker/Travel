@@ -130,3 +130,50 @@ select
   min(created_at) as first_seen,
   max(created_at) as latest_seen
 from auth.users;
+
+-- ---------------------------------------------------------------------------
+-- 8. Session churn → duplicated storage.
+--    Every object is stored under "<uid>/...", so a phone that loses its
+--    session and mints a new uid re-uploads its avatars into a fresh folder
+--    while the old copies stay behind forever. This shows how many distinct
+--    uid folders exist, how many actually own notes, and what the abandoned
+--    ones are costing. TRAVEL PROJECT ONLY.
+-- ---------------------------------------------------------------------------
+with folders as (
+  select
+    split_part(name, '/', 1)      as uid,
+    (metadata->>'size')::bigint   as bytes,
+    name
+  from storage.objects
+  where bucket_id = 'travel-photos'
+)
+select
+  count(distinct uid)                                       as uid_folders,
+  count(distinct uid) filter (
+    where uid in (select user_id::text from public.travel_notes)
+  )                                                          as uids_with_notes,
+  pg_size_pretty(sum(bytes) filter (
+    where uid not in (select user_id::text from public.travel_notes)
+  ))                                                         as bytes_in_abandoned_folders,
+  count(*) filter (where name ~ '/avatar/')                  as avatar_files
+from folders;
+
+-- The same, broken out per uid — the tail of one-avatar-only folders is the
+-- fingerprint of a phone that re-authenticated and re-uploaded from scratch.
+with folders as (
+  select
+    split_part(name, '/', 1)    as uid,
+    (metadata->>'size')::bigint as bytes,
+    name
+  from storage.objects
+  where bucket_id = 'travel-photos'
+)
+select
+  uid,
+  count(*)                        as files,
+  count(*) filter (where name ~ '/avatar/') as avatars,
+  pg_size_pretty(sum(bytes))      as size,
+  (uid in (select user_id::text from public.travel_notes)) as still_owns_notes
+from folders
+group by uid
+order by sum(bytes) desc;
