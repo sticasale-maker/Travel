@@ -135,12 +135,16 @@
   function openDB() {
     return new Promise(function (resolve, reject) {
       if (DB) return resolve(DB);
-      var req = indexedDB.open('travel-notes-db', 2);
+      var req = indexedDB.open('travel-notes-db', 3);
       req.onupgradeneeded = function (e) {
         var db = e.target.result;
         if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('photos'))
           db.createObjectStore('photos', { keyPath: 'id' }).createIndex('note_id', 'note_id', { unique: false });
+        // Voice memos, keyed by note id. We store the raw ArrayBuffer + mime type,
+        // NOT a Blob: iOS can invalidate a file-backed Blob across a reload, but a
+        // plain buffer always round-trips intact. Rebuilt into a Blob on read.
+        if (!db.objectStoreNames.contains('audio')) db.createObjectStore('audio', { keyPath: 'id' });
         // cache of everyone's entries (fetched from the server) for offline reading
         if (!db.objectStoreNames.contains('remote')) db.createObjectStore('remote', { keyPath: 'id' });
       };
@@ -156,6 +160,10 @@
   function putPhoto(p) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.put(p)); }); }
   function delPhoto(id) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
   function photosFor(id) { return tx('photos', 'readonly').then(function (s) { return idbReq(s.index('note_id').getAll(id)); }); }
+  // Voice memos: stored as {id, buf, type}; see the store comment in openDB().
+  function putAudioBuf(id, buf, type) { return tx('audio', 'readwrite').then(function (s) { return idbReq(s.put({ id: id, buf: buf, type: type || 'audio/mp4' })); }); }
+  function delAudioBuf(id) { return tx('audio', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
+  function allAudioBufs() { return tx('audio', 'readonly').then(function (s) { return idbReq(s.getAll()); }); }
   // remote-entry cache (so everyone's entries read offline)
   function cacheRemote(rows) {
     return openDB().then(function (db) {
@@ -371,11 +379,16 @@
   }
 
   // ---------------------------------------------------------------- sync
+  // Attempt counts persist to localStorage: an installed iOS app is killed and
+  // relaunched constantly, and an in-memory counter resets to 0 every time — so
+  // "give up after N tries" would never actually fire on a phone.
+  function loadAttempts() { try { return JSON.parse(localStorage.getItem('travel_attempts') || '{}') || {}; } catch (e) { return {}; } }
+  function saveAttempts() { try { localStorage.setItem('travel_attempts', JSON.stringify(state.attempts)); } catch (e) {} }
   function backoffReady(id) { var a = state.attempts[id]; return !a || Date.now() >= a.nextTry; }
   function noteFailed(id, err) { var a = state.attempts[id] || { count: 0 }; a.count += 1; a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1));
     if (err) { try { a.err = err.message || err.error_description || err.error || (typeof err === 'string' ? err : JSON.stringify(err)); } catch (e) { a.err = 'upload failed'; } }
-    state.attempts[id] = a; }
-  function noteOK(id) { delete state.attempts[id]; }
+    state.attempts[id] = a; saveAttempts(); }
+  function noteOK(id) { delete state.attempts[id]; saveAttempts(); }
 
   // upsert a row; if the DB doesn't have avatar_path yet, retry without it so
   // posting never breaks before the one-line ALTER is run.
@@ -435,6 +448,7 @@
         .then(function (res) {
           if (res.error) throw res.error;
           return photosFor(n.id).then(function (ps) { return Promise.all(ps.map(function (p) { return delPhoto(p.id); })); })
+            .then(function () { delete audioBlobCache[n.id]; return delAudioBuf(n.id).catch(function () {}); })
             .then(function () { return delNote(n.id); });
         });
     }
@@ -475,18 +489,26 @@
         if (audioPending) {
           // Dead/empty audio blob → abandon it so the post can still post.
           if (!audioBlob || !audioBlob.size) { audioPending = false; }
-          // If audio has failed >3 times, drop it so the post can save (text + photos preserved).
-          else if (state.attempts[n.id] && state.attempts[n.id].count > 3) { audioPending = false; delete audioBlobCache[n.id]; }
+          // Failed too many times: stop blocking the post so the text + photos go
+          // out now. The recording is NOT discarded — the bytes stay in IndexedDB
+          // and the note keeps an audio_stuck marker so it can be retried later.
+          else if (state.attempts[n.id] && state.attempts[n.id].count > 3) { audioPending = false; n.audio_stuck = true; }
           else {
             var ty = audioBlob.type || '';
             var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
             var apath = state.uid + '/' + n.id + '/audio.' + ext;
             setProgress(n, 'kind_voice', 0);
             audioP = withTimeout(uploadWithProgress(apath, audioBlob, ty || 'audio/mp4', function (f) { setProgress(n, 'kind_voice', f); }), 90000, 'audio upload')
-              .then(function (res) { if (!res.error) { n.audio_path = apath; audioPending = false; delete audioBlobCache[n.id]; } })
+              .then(function (res) {
+                if (!res.error) { n.audio_path = apath; audioPending = false; n.audio_stuck = false; delete audioBlobCache[n.id]; return delAudioBuf(n.id).catch(function () {}); }
+                // Surface the real storage error on the note's ⚠ badge instead of
+                // the generic "media still uploading", so a failure is diagnosable.
+                if (!mediaErr) mediaErr = res.error;
+              })
               .catch(function (err) {
                 var msg = ((err && (err.message || err.error)) || '') + '';
-                if (/no content|content provided|empty/i.test(msg)) { audioPending = false; delete audioBlobCache[n.id]; }
+                if (/no content|content provided|empty/i.test(msg)) { audioPending = false; delete audioBlobCache[n.id]; return delAudioBuf(n.id).catch(function () {}); }
+                if (!mediaErr) mediaErr = err;
                 // else: retry on next sync; don't throw so the post still goes out
               });
           }
@@ -596,7 +618,19 @@
   // buffer end to end. We render our own play/pause + progress UI on top.
   var VCTX = null, vActive = null;   // vActive = stop() of whichever memo is currently sounding
   var vPlayingEl = null, vDeferred = []; // the playing .vmemo, and days whose re-render we deferred
-  var audioBlobCache = {}; // store audio blobs in memory; don't persist to IndexedDB (iOS invalidates Blobs like Files)
+  // Live Blobs for playback + upload. Backed by the 'audio' store (raw
+  // ArrayBuffers), which is rehydrated into here on boot — so a recording is not
+  // lost when the app is closed before its upload finishes. Never store a Blob
+  // itself in IndexedDB: iOS can invalidate a file-backed Blob across a reload.
+  var audioBlobCache = {};
+  function hydrateAudioCache() {
+    return allAudioBufs().then(function (recs) {
+      (recs || []).forEach(function (r) {
+        if (!r || !r.buf || audioBlobCache[r.id]) return;
+        try { audioBlobCache[r.id] = new Blob([r.buf], { type: r.type || 'audio/mp4' }); } catch (e) {}
+      });
+    }).catch(function () {});
+  }
   function vctx() { VCTX = VCTX || new (window.AudioContext || window.webkitAudioContext)(); return VCTX; }
   function vfmt(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
   function vStopActive() { if (vActive) { var f = vActive; vActive = null; try { f(); } catch (e) {} } }
@@ -963,6 +997,15 @@
     base._local = true;
     return putNote(base).then(function () {
       var chain = Promise.resolve();
+      // Keep the recording's bytes on disk so it survives the app being closed or
+      // killed before the upload finishes (memory alone loses it).
+      if (pendingAudio) {
+        chain = chain.then(function () {
+          return pendingAudio.arrayBuffer()
+            .then(function (buf) { return putAudioBuf(id, buf, pendingAudio.type); })
+            .catch(function () {});
+        });
+      }
       pendingPhotos.forEach(function (p) { chain = chain.then(function () { return putPhoto({ id: uuid(), note_id: id, blob: p.blob, filename: p.filename, uploaded: false }); }); });
       return chain;
     });
@@ -1221,8 +1264,10 @@
       if (rows && rows.length && !state.remote.length) { state.remote = rows; renderAll(); }
     });
     if (MODE === 'poster') {
+      state.attempts = loadAttempts();
       // don't block the view with a setup modal — the journal is readable
       // straight away; we prompt for a profile only when someone taps "Add a memory".
+      hydrateAudioCache().then(function () { renderAll(); });
       ensureAuth().then(function () { fetchProfiles(); fetchPeople().then(maybePromptIdentity); renderAll(); syncNow(); });
       window.addEventListener('online', syncNow);
       window.addEventListener('offline', updateSyncStatus);
