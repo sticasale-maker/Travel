@@ -1458,7 +1458,11 @@ window.TRIP_DATA = {
   }
   // Upload to Supabase Storage via XHR so we get real byte-progress (the JS client
   // doesn't expose upload progress). Returns {data} or {error} like the client.
-  function uploadWithProgress(path, blob, contentType, onProgress) {
+  // `immutable` is only safe for objects whose path is unique to their bytes —
+  // photos and videos, which carry a uuid() filename. Avatars and voice memos
+  // reuse a fixed path and are re-uploaded in place when changed, so they must
+  // keep revalidating or viewers would be stuck with the superseded file.
+  function uploadWithProgress(path, blob, contentType, onProgress, immutable) {
     return state.sb.auth.getSession().then(function (r) {
       var token = r.data && r.data.session && r.data.session.access_token;
       return new Promise(function (resolve) {
@@ -1468,6 +1472,11 @@ window.TRIP_DATA = {
         xhr.setRequestHeader('authorization', 'Bearer ' + token);
         xhr.setRequestHeader('apikey', CFG.SUPABASE_ANON_KEY);
         xhr.setRequestHeader('x-upsert', 'true');
+        // The storage default of max-age=3600 buys an hourly re-download of
+        // content the client already has. A day card is torn down and rebuilt
+        // on every renderAll(), so that revalidation is charged over and over —
+        // it is most of how cached egress reached 5x the quota.
+        if (immutable) xhr.setRequestHeader('cache-control', 'max-age=31536000, immutable');
         if (contentType) xhr.setRequestHeader('content-type', contentType);
         xhr.upload.onprogress = function (e) { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
         xhr.onload = function () {
@@ -1547,7 +1556,8 @@ window.TRIP_DATA = {
           var isVid = isVideoName(p.filename);
           var ctype = isVid ? ((p.blob && p.blob.type) || 'video/mp4') : 'image/jpeg';
           setProgress(n, isVid ? 'kind_video' : 'kind_photo', 0);
-          return uploadWithProgress(path, p.blob, ctype, function (f) { setProgress(n, isVid ? 'kind_video' : 'kind_photo', f); })
+          // Immutable: the filename is a uuid(), so these bytes never change.
+          return uploadWithProgress(path, p.blob, ctype, function (f) { setProgress(n, isVid ? 'kind_video' : 'kind_photo', f); }, true)
             .then(function (res) { if (res.error) throw res.error; if (paths.indexOf(path) === -1) paths.push(path); p.uploaded = true; p.path = path; return putPhoto(p); })
             // A single slow/failing clip must NOT block the whole post. If the
             // server says the content is empty, it's unrecoverable → drop it;
