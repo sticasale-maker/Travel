@@ -141,8 +141,6 @@
         if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('photos'))
           db.createObjectStore('photos', { keyPath: 'id' }).createIndex('note_id', 'note_id', { unique: false });
-        if (!db.objectStoreNames.contains('audio'))
-          db.createObjectStore('audio', { keyPath: 'id' }).createIndex('note_id', 'note_id', { unique: false });
         // cache of everyone's entries (fetched from the server) for offline reading
         if (!db.objectStoreNames.contains('remote')) db.createObjectStore('remote', { keyPath: 'id' });
       };
@@ -158,9 +156,6 @@
   function putPhoto(p) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.put(p)); }); }
   function delPhoto(id) { return tx('photos', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
   function photosFor(id) { return tx('photos', 'readonly').then(function (s) { return idbReq(s.index('note_id').getAll(id)); }); }
-  function putAudio(a) { return tx('audio', 'readwrite').then(function (s) { return idbReq(s.put(a)); }); }
-  function delAudio(id) { return tx('audio', 'readwrite').then(function (s) { return idbReq(s.delete(id)); }); }
-  function audioFor(noteId) { return tx('audio', 'readonly').then(function (s) { return idbReq(s.index('note_id').getAll(noteId)); }); }
   // remote-entry cache (so everyone's entries read offline)
   function cacheRemote(rows) {
     return openDB().then(function (db) {
@@ -440,7 +435,6 @@
         .then(function (res) {
           if (res.error) throw res.error;
           return photosFor(n.id).then(function (ps) { return Promise.all(ps.map(function (p) { return delPhoto(p.id); })); })
-            .then(function () { return audioFor(n.id).then(function (as) { return Promise.all(as.map(function (a) { return delAudio(a.id); })); }); })
             .then(function () { return delNote(n.id); });
         });
     }
@@ -475,33 +469,29 @@
       return chain.then(function () {
         n.photo_paths = paths;
         // upload a voice memory if one is attached and not yet uploaded (best-effort)
-        return audioFor(n.id).then(function (audioRecs) {
-          var audioRec = audioRecs && audioRecs[0];
-          var audioBlob = audioBlobCache[n.id] || (audioRec && audioRec.blob);
-          var audioPending = !!(audioBlob && !n.audio_path);
-          var audioP = Promise.resolve();
-          var audioCleanup = Promise.resolve();
-          if (audioPending) {
-            // Dead/empty audio blob → abandon it so the post can still post.
-            if (!audioBlob || !audioBlob.size) {
-              audioPending = false;
-              if (audioRec) audioCleanup = delAudio(audioRec.id);
-            }
-            else {
-              var ty = audioBlob.type || '';
-              var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
-              var apath = state.uid + '/' + n.id + '/audio.' + ext;
-              setProgress(n, 'kind_voice', 0);
-              audioP = withTimeout(uploadWithProgress(apath, audioBlob, ty || 'audio/mp4', function (f) { setProgress(n, 'kind_voice', f); }), 90000, 'audio upload')
-                .then(function (res) { if (!res.error) { n.audio_path = apath; audioPending = false; delete audioBlobCache[n.id]; if (audioRec) audioCleanup = delAudio(audioRec.id); } })
-                .catch(function (err) {
-                  var msg = ((err && (err.message || err.error)) || '') + '';
-                  if (/no content|content provided|empty/i.test(msg)) { audioPending = false; delete audioBlobCache[n.id]; if (audioRec) audioCleanup = delAudio(audioRec.id); }
-                  // else: retry on next sync; don't throw so the post still goes out
-                });
-            }
+        var audioBlob = audioBlobCache[n.id];
+        var audioPending = !!(audioBlob && !n.audio_path);
+        var audioP = Promise.resolve();
+        if (audioPending) {
+          // Dead/empty audio blob → abandon it so the post can still post.
+          if (!audioBlob || !audioBlob.size) { audioPending = false; }
+          // If audio has failed >3 times, drop it so the post can save (text + photos preserved).
+          else if (state.attempts[n.id] && state.attempts[n.id].count > 3) { audioPending = false; delete audioBlobCache[n.id]; }
+          else {
+            var ty = audioBlob.type || '';
+            var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
+            var apath = state.uid + '/' + n.id + '/audio.' + ext;
+            setProgress(n, 'kind_voice', 0);
+            audioP = withTimeout(uploadWithProgress(apath, audioBlob, ty || 'audio/mp4', function (f) { setProgress(n, 'kind_voice', f); }), 90000, 'audio upload')
+              .then(function (res) { if (!res.error) { n.audio_path = apath; audioPending = false; delete audioBlobCache[n.id]; } })
+              .catch(function (err) {
+                var msg = ((err && (err.message || err.error)) || '') + '';
+                if (/no content|content provided|empty/i.test(msg)) { audioPending = false; delete audioBlobCache[n.id]; }
+                // else: retry on next sync; don't throw so the post still goes out
+              });
           }
-          return audioP.then(function () { return audioCleanup; }).then(function () {
+        }
+        return audioP.then(function () {
         // fill the author's avatar path (uploaded above) if we didn't have it yet
         if (!n.avatar_path && n.person_key) { var pr = personById(n.person_key); if (pr && pr.avatarPath) n.avatar_path = pr.avatarPath; }
         var row = {
@@ -529,9 +519,8 @@
             });
           });
         });
-        }); // audioCleanup.then
-          });
         });
+      });
     });
   }
 
@@ -974,7 +963,6 @@
     base._local = true;
     return putNote(base).then(function () {
       var chain = Promise.resolve();
-      if (pendingAudio) { chain = chain.then(function () { return putAudio({ id: id, note_id: id, blob: pendingAudio, uploaded: false }); }); }
       pendingPhotos.forEach(function (p) { chain = chain.then(function () { return putPhoto({ id: uuid(), note_id: id, blob: p.blob, filename: p.filename, uploaded: false }); }); });
       return chain;
     });
