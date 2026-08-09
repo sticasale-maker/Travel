@@ -1,6 +1,8 @@
 /* Outback Loop — offline service worker */
 const CACHE = 'outback-loop-v74';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
+const MEDIA_CACHE = 'outback-media'; // persistent: voice memos + short video clips
+const MEDIA_CACHE_MAX = 25 * 1024 * 1024; // per-clip ceiling; larger videos stream from the network every time
 const ASSETS = [
   './index.html',
   './read.html',
@@ -59,7 +61,7 @@ self.addEventListener('install', function (e) {
 self.addEventListener('activate', function (e) {
   e.waitUntil(
     caches.keys().then(function (keys) {
-      return Promise.all(keys.filter(function (k) { return k !== CACHE && k !== IMG_CACHE; })
+      return Promise.all(keys.filter(function (k) { return k !== CACHE && k !== IMG_CACHE && k !== MEDIA_CACHE; })
         .map(function (k) { return caches.delete(k); }));
     }).then(function () { return self.clients.claim(); })
   );
@@ -70,25 +72,39 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
 
-  // Supabase: cache public storage images (photos/avatars) so they show offline
-  // once seen; never cache auth / REST data / functions (those must stay fresh).
+  // Supabase: cache public storage objects (photos, avatars, voice memos, short
+  // clips) so they show offline once seen and are never paid for twice; never
+  // cache auth / REST data / functions (those must stay fresh).
   if (url.hostname.endsWith('.supabase.co')) {
-    // Audio + video clips: let the browser fetch them natively so Range requests
-    // (seeking) work, and so we don't bloat the cache with big media files.
-    if (/\.(m4a|mp4|m4v|mov|webm|ogv|ogg|oga|aac|mp3)$/i.test(url.pathname)) return;
-    if (url.pathname.indexOf('/storage/v1/object/public/') === 0) {
-      e.respondWith(
-        caches.open(IMG_CACHE).then(function (c) {
-          return c.match(req).then(function (cached) {
-            var net = fetch(req).then(function (r) {
-              if (r && r.status === 200) c.put(req, r.clone());
-              return r;
-            }).catch(function () { return cached; });
-            return cached || net;
-          });
-        })
-      );
-    }
+    if (url.pathname.indexOf('/storage/v1/object/public/') !== 0) return;
+    var isMedia = /\.(m4a|mp4|m4v|mov|webm|ogv|ogg|oga|aac|mp3)$/i.test(url.pathname);
+
+    // Seeking issues a Range request, and the Cache API can neither store a 206
+    // nor synthesise one from a stored 200 — so those must reach the network
+    // untouched. Checked before any cache lookup, because c.match() keys on URL
+    // and would happily answer a Range request with a full-body 200.
+    if (isMedia && req.headers.get('range')) return;
+
+    e.respondWith(
+      caches.open(isMedia ? MEDIA_CACHE : IMG_CACHE).then(function (c) {
+        return c.match(req).then(function (cached) {
+          // Storage object paths are UUID-based and their contents never change,
+          // so a cache hit is always current. Serve it and do NOT revalidate.
+          // Revalidating on every hit meant the cache saved zero bandwidth: each
+          // app open silently re-downloaded every photo it was already showing,
+          // which is what put cached egress at 5x the monthly allowance.
+          if (cached) return cached;
+          return fetch(req).then(function (r) {
+            if (!r || r.status !== 200) return r;
+            // Clips are cached so replays are free, but only up to a ceiling —
+            // a phone's storage quota should not be spent on one long video.
+            var len = parseInt(r.headers.get('content-length') || '0', 10);
+            if (!isMedia || (len > 0 && len <= MEDIA_CACHE_MAX)) c.put(req, r.clone());
+            return r;
+          }).catch(function () { return cached; });
+        });
+      })
+    );
     return;
   }
 
