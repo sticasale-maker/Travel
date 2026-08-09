@@ -440,16 +440,31 @@
     });
   }
 
+  // Drop every local trace of a note (its photos, its voice bytes, the row).
+  function purgeLocal(n) {
+    return photosFor(n.id).then(function (ps) { return Promise.all(ps.map(function (p) { return delPhoto(p.id); })); })
+      .then(function () { delete audioBlobCache[n.id]; return delAudioBuf(n.id).catch(function () {}); })
+      .then(function () { return delNote(n.id); });
+  }
+
   function syncNote(n) {
     if (n.pending_op === 'delete') {
+      // A pending delete is counted by the "Saving…" badge but renders NO card
+      // (renderDay drops deleted notes), so a delete that keeps failing sits in
+      // the queue forever as an invisible ghost with no ⚠ badge to explain it.
+      // The user already asked for this note to go, so after repeated failures
+      // drop it from this phone — there is nothing here they wanted kept.
+      var at = state.attempts[n.id];
+      if (at && at.count > 3) return purgeLocal(n);
       var paths = n.photo_paths || [];
-      var rm = paths.length ? state.sb.storage.from(BUCKET).remove(paths).catch(function () {}) : Promise.resolve();
+      // Never let media removal hang: it has no timeout of its own.
+      var rm = paths.length
+        ? withTimeout(state.sb.storage.from(BUCKET).remove(paths), 30000, 'remove media').catch(function () {})
+        : Promise.resolve();
       return rm.then(function () { return state.sb.from('travel_notes').delete().eq('id', n.id); })
         .then(function (res) {
           if (res.error) throw res.error;
-          return photosFor(n.id).then(function (ps) { return Promise.all(ps.map(function (p) { return delPhoto(p.id); })); })
-            .then(function () { delete audioBlobCache[n.id]; return delAudioBuf(n.id).catch(function () {}); })
-            .then(function () { return delNote(n.id); });
+          return purgeLocal(n);
         });
     }
     return photosFor(n.id).then(function (photos) {
