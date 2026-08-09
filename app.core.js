@@ -1226,6 +1226,28 @@ window.TRIP_DATA = {
       });
     }).catch(function () { return null; });
   }
+
+  // "new row violates row-level security policy" means the server did not accept
+  // our identity for this write. getSession() happily returns a stored session
+  // whose JWT has expired — after days offline the anonymous refresh token can
+  // lapse, so auth.uid() is null server-side while we still believe we're signed
+  // in, and every insert is refused forever. Force a genuinely fresh session.
+  function isRlsError(err) {
+    return /row-level security|violates row.level/i.test(((err && (err.message || err.error)) || '') + '');
+  }
+  function anonSignIn() {
+    return state.sb.auth.signInAnonymously().then(function (r) {
+      if (r && r.data && r.data.session) { state.uid = r.data.session.user.id; return true; }
+      return false;
+    }).catch(function () { return false; });
+  }
+  function reauth() {
+    if (!state.sb || !navigator.onLine) return Promise.resolve(false);
+    return state.sb.auth.refreshSession().then(function (r) {
+      if (r && r.data && r.data.session) { state.uid = r.data.session.user.id; return true; }
+      return anonSignIn();
+    }).catch(anonSignIn);
+  }
   function publicUrl(path) {
     if (!state.sb || !path) return '';
     return state.sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
@@ -1392,13 +1414,22 @@ window.TRIP_DATA = {
   // posting never breaks before the one-line ALTER is run.
   // upsert; if the DB is missing a column (e.g. avatar_path/audio_path not yet
   // migrated), strip the named column and retry so posting never breaks.
-  function upsertRow(row) {
+  function upsertRow(row, _reauthed) {
     return state.sb.from('travel_notes').upsert(row).then(function (res) {
       if (res.error) {
         var msg = res.error.message || '';
         var m = msg.match(/'([a-z_]+)' column/) || msg.match(/column [\w".]*?([a-z_]+) does not exist/);
         var col = m && m[1];
-        if (col && row[col] !== undefined) { var r2 = Object.assign({}, row); delete r2[col]; return upsertRow(r2); }
+        if (col && row[col] !== undefined) { var r2 = Object.assign({}, row); delete r2[col]; return upsertRow(r2, _reauthed); }
+        // Refused by RLS: our token is probably stale. Get a fresh session and
+        // retry once, stamping the row with the identity the server will now
+        // see — otherwise this post can never save, no matter how often we try.
+        if (!_reauthed && isRlsError(res.error)) {
+          return reauth().then(function (ok) {
+            if (!ok) return res;
+            return upsertRow(Object.assign({}, row, { user_id: state.uid }), true);
+          });
+        }
       }
       return res;
     });
@@ -1436,6 +1467,28 @@ window.TRIP_DATA = {
         xhr.send(blob);
       });
     });
+  }
+
+  // Move a note (and its media) onto a fresh id. Used when the server refuses
+  // the current id under RLS even after re-authenticating: that id belongs to a
+  // row from a previous anonymous session which we can no longer write to, so
+  // the only way the content ever posts is as a genuinely new row.
+  function reissueNoteId(n) {
+    var oldId = n.id, newId = uuid();
+    return photosFor(oldId).then(function (ps) {
+      return Promise.all(ps.map(function (p) { p.note_id = newId; return putPhoto(p); }));
+    }).then(function () {
+      var blob = audioBlobCache[oldId];
+      if (blob) { audioBlobCache[newId] = blob; delete audioBlobCache[oldId]; }
+      return allAudioBufs().then(function (recs) {
+        var rec = (recs || []).filter(function (r) { return r.id === oldId; })[0];
+        if (!rec) return;
+        return putAudioBuf(newId, rec.buf, rec.type).then(function () { return delAudioBuf(oldId); });
+      }).catch(function () {});
+    }).then(function () {
+      n.id = newId; n.synced = false; n.pending_op = n.pending_op || 'create';
+      return delNote(oldId).then(function () { return putNote(n); });
+    }).then(function () { delete state.attempts[oldId]; saveAttempts(); });
   }
 
   // Drop every local trace of a note (its photos, its voice bytes, the row).
@@ -1540,7 +1593,16 @@ window.TRIP_DATA = {
         // fires — even if a clip is still uploading. Remaining media is added on
         // later syncs (re-upsert; the insert-only notification won't re-fire).
         return upsertRow(row).then(function (res) {
-          if (res.error) throw res.error;   // the row itself failed → real failure, retry all
+          if (res.error) {
+            // Still refused after a fresh session: this id is not writable by us.
+            // If nobody can see that row in the feed, nothing is lost by posting
+            // the content again under a new id — better than retrying forever.
+            var visible = (state.remote || []).filter(function (r) { return r.id === n.id; }).length > 0;
+            if (isRlsError(res.error) && !visible) {
+              return reissueNoteId(n).then(function () { throw new Error('re-issued under a new id — will retry'); });
+            }
+            throw res.error;   // the row itself failed → real failure, retry all
+          }
           n.user_id = state.uid;
           var allDone = !mediaErr && !audioPending;
           if (allDone) { n.synced = true; n.pending_op = null; }
