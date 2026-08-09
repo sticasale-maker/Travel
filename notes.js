@@ -407,9 +407,22 @@
   function loadAttempts() { try { return JSON.parse(localStorage.getItem('travel_attempts') || '{}') || {}; } catch (e) { return {}; } }
   function saveAttempts() { try { localStorage.setItem('travel_attempts', JSON.stringify(state.attempts)); } catch (e) {} }
   function backoffReady(id) { var a = state.attempts[id]; return !a || Date.now() >= a.nextTry; }
-  function noteFailed(id, err) { var a = state.attempts[id] || { count: 0 }; a.count += 1; a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, a.count - 1));
+  // Safari reports a fetch that never reached the server as "TypeError: Load
+  // failed" (Chrome: "Failed to fetch"). That is lost signal, not a refusal.
+  function isNetErr(err) {
+    return /load failed|failed to fetch|network|timed out|timeout|offline/i.test(((err && (err.message || err.error)) || '') + '');
+  }
+  function noteFailed(id, err) {
+    var a = state.attempts[id] || { count: 0, soft: 0 };
+    // Only a real refusal counts toward giving up on a post's media. Driving
+    // through country with no signal must not make a note abandon its photos
+    // or voice memo — those failures back off, but they don't accumulate.
+    if (isNetErr(err)) a.soft = (a.soft || 0) + 1; else a.count += 1;
+    var steps = a.count + (a.soft || 0);
+    a.nextTry = Date.now() + Math.min(5 * 60000, 5000 * Math.pow(2, Math.max(0, steps - 1)));
     if (err) { try { a.err = err.message || err.error_description || err.error || (typeof err === 'string' ? err : JSON.stringify(err)); } catch (e) { a.err = 'upload failed'; } }
-    state.attempts[id] = a; saveAttempts(); }
+    state.attempts[id] = a; saveAttempts();
+  }
   function noteOK(id) { delete state.attempts[id]; saveAttempts(); }
 
   // upsert a row; if the DB doesn't have avatar_path yet, retry without it so
@@ -457,6 +470,12 @@
         xhr.setRequestHeader('authorization', 'Bearer ' + token);
         xhr.setRequestHeader('apikey', CFG.SUPABASE_ANON_KEY);
         xhr.setRequestHeader('x-upsert', 'true');
+        // Every object lives at a UUID path whose bytes never change, so the
+        // storage default of max-age=3600 just buys an hourly re-download of
+        // content the client already has. A rendered day card is torn down and
+        // rebuilt on every renderAll(), so that revalidation is charged again
+        // and again — it is most of how cached egress reached 5x the quota.
+        xhr.setRequestHeader('cache-control', 'max-age=31536000, immutable');
         if (contentType) xhr.setRequestHeader('content-type', contentType);
         xhr.upload.onprogress = function (e) { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
         xhr.onload = function () {
@@ -1318,7 +1337,8 @@
       var wait = a.nextTry ? Math.max(0, Math.round((a.nextTry - Date.now()) / 1000)) : 0;
       var bits = ['<b>' + esc(n.author || '—') + '</b> · ' + esc(n.day_key || '') + ' · <code>' + esc(n.pending_op) + '</code>'];
       if (n.body) bits.push(esc(String(n.body).slice(0, 60)));
-      bits.push('tries: ' + (a.count || 0) + (wait ? ' · retry in ' + wait + 's' : ' · ready'));
+      bits.push('tries: ' + (a.count || 0) + (a.soft ? ' · no-signal retries: ' + a.soft : '') +
+        (wait ? ' · retry in ' + wait + 's' : ' · ready'));
       var ab = audioBlobCache[n.id];
       if (ab) bits.push('voice: ' + Math.round(ab.size / 1024) + ' KB' + (n.audio_stuck ? ' (not uploaded)' : ''));
       if (a.err) bits.push('<span style="color:#c0392b">⚠ ' + esc(a.err) + '</span>');
