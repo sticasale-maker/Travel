@@ -1,5 +1,5 @@
 /* Outback Loop — offline service worker */
-const CACHE = 'outback-loop-v75';
+const CACHE = 'outback-loop-v76';
 const IMG_CACHE = 'outback-img'; // persistent (survives app updates): journal photos, avatars, destination photos
 const MEDIA_CACHE = 'outback-media'; // persistent: voice memos + short video clips
 const MEDIA_CACHE_MAX = 25 * 1024 * 1024; // per-clip ceiling; larger videos stream from the network every time
