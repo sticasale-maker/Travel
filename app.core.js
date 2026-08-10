@@ -1617,12 +1617,21 @@ window.TRIP_DATA = {
         // later syncs (re-upsert; the insert-only notification won't re-fire).
         return upsertRow(row).then(function (res) {
           if (res.error) {
-            // Still refused after a fresh session: this id is not writable by us.
-            // If nobody can see that row in the feed, nothing is lost by posting
-            // the content again under a new id — better than retrying forever.
-            var visible = (state.remote || []).filter(function (r) { return r.id === n.id; }).length > 0;
-            if (isRlsError(res.error) && !visible) {
-              return reissueNoteId(n).then(function () { throw new Error('re-issued under a new id — will retry'); });
+            // Stale anon session: RLS denies the row insert because our token/user_id
+            // is no longer valid for that note id (from a previous session). Re-auth
+            // and retry; if still denied and the row isn't visible, re-issue under
+            // a new id (fresh session → new id is writable).
+            if (isRlsError(res.error)) {
+              return ensureAuth().then(function () {
+                return upsertRow(row).then(function (res2) {
+                  if (res2.error && !((state.remote || []).filter(function (r) { return r.id === n.id; }).length > 0)) {
+                    var newId = uuid(); n.id = newId;
+                    return reissueNoteId(n).then(function () { throw new Error('re-issued ' + newId + ' — will retry'); });
+                  }
+                  if (res2.error) throw res2.error;
+                  return res2;
+                });
+              });
             }
             throw res.error;   // the row itself failed → real failure, retry all
           }
