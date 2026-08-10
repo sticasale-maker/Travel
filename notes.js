@@ -458,40 +458,6 @@
       Promise.resolve(promise).then(function (v) { clearTimeout(to); resolve(v); }, function (e) { clearTimeout(to); reject(e); });
     });
   }
-  // Upload to Supabase Storage via XHR so we get real byte-progress (the JS client
-  // doesn't expose upload progress). Returns {data} or {error} like the client.
-  // `immutable` is only safe for objects whose path is unique to their bytes —
-  // photos and videos, which carry a uuid() filename. Avatars and voice memos
-  // reuse a fixed path and are re-uploaded in place when changed, so they must
-  // keep revalidating or viewers would be stuck with the superseded file.
-  function uploadWithProgress(path, blob, contentType, onProgress, immutable) {
-    return state.sb.auth.getSession().then(function (r) {
-      var token = r.data && r.data.session && r.data.session.access_token;
-      return new Promise(function (resolve) {
-        var xhr = new XMLHttpRequest();
-        var url = CFG.SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + path.split('/').map(encodeURIComponent).join('/');
-        xhr.open('POST', url, true);
-        xhr.setRequestHeader('authorization', 'Bearer ' + token);
-        xhr.setRequestHeader('apikey', CFG.SUPABASE_ANON_KEY);
-        xhr.setRequestHeader('x-upsert', 'true');
-        // The storage default of max-age=3600 buys an hourly re-download of
-        // content the client already has. A day card is torn down and rebuilt
-        // on every renderAll(), so that revalidation is charged over and over —
-        // it is most of how cached egress reached 5x the quota.
-        if (immutable) xhr.setRequestHeader('cache-control', 'max-age=31536000, immutable');
-        if (contentType) xhr.setRequestHeader('content-type', contentType);
-        xhr.upload.onprogress = function (e) { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
-        xhr.onload = function () {
-          if (xhr.status >= 200 && xhr.status < 300) resolve({ data: { path: path } });
-          else { var msg = 'upload failed (' + xhr.status + ')'; try { var j = JSON.parse(xhr.responseText); msg = j.message || j.error || msg; } catch (e) {} resolve({ error: { message: msg, statusCode: xhr.status } }); }
-        };
-        xhr.onerror = function () { resolve({ error: { message: 'network error' } }); };
-        xhr.ontimeout = function () { resolve({ error: { message: 'upload timed out' } }); };
-        xhr.timeout = 120000;
-        xhr.send(blob);
-      });
-    });
-  }
 
   // Move a note (and its media) onto a fresh id. Used when the server refuses
   // the current id under RLS even after re-authenticating: that id belongs to a
@@ -559,7 +525,8 @@
           var ctype = isVid ? ((p.blob && p.blob.type) || 'video/mp4') : 'image/jpeg';
           setProgress(n, isVid ? 'kind_video' : 'kind_photo', 0);
           // Immutable: the filename is a uuid(), so these bytes never change.
-          return uploadWithProgress(path, p.blob, ctype, function (f) { setProgress(n, isVid ? 'kind_video' : 'kind_photo', f); }, true)
+          setProgress(n, isVid ? 'kind_video' : 'kind_photo', 1);
+          return withTimeout(state.sb.storage.from(BUCKET).upload(path, p.blob, { contentType: ctype, upsert: true }), 90000, 'photo')
             .then(function (res) { if (res.error) throw res.error; if (paths.indexOf(path) === -1) paths.push(path); p.uploaded = true; p.path = path; return putPhoto(p); })
             // A single slow/failing clip must NOT block the whole post. If the
             // server says the content is empty, it's unrecoverable → drop it;
@@ -589,8 +556,9 @@
             var ext = ty.indexOf('webm') > -1 ? 'webm' : (ty.indexOf('ogg') > -1 ? 'ogg' : 'm4a');
             var apath = state.uid + '/' + n.id + '/audio.' + ext;
             setProgress(n, 'kind_voice', 0);
-            audioP = withTimeout(uploadWithProgress(apath, audioBlob, ty || 'audio/mp4', function (f) { setProgress(n, 'kind_voice', f); }), 90000, 'audio upload')
+            audioP = withTimeout(state.sb.storage.from(BUCKET).upload(apath, audioBlob, { contentType: ty || 'audio/mp4', upsert: true }), 90000, 'audio')
               .then(function (res) {
+                setProgress(n, 'kind_voice', 1);
                 if (!res.error) { n.audio_path = apath; audioPending = false; n.audio_stuck = false; delete audioBlobCache[n.id]; return delAudioBuf(n.id).catch(function () {}); }
                 // Surface the real storage error on the note's ⚠ badge instead of
                 // the generic "media still uploading", so a failure is diagnosable.
